@@ -1,40 +1,36 @@
-# AuraHR - Premium SaaS HR Portal & Mobile Simulator (Serverless Edition)
+# AuraHR - Premium SaaS HR Portal & Mobile Simulator (Serverless & PHP Proxy Edition)
+A Product of [SS Labz](https://ss-labz.pages.dev/)
 
-AuraHR is a high-fidelity, interactive, multi-tenant SaaS HR management dashboard and simulated mobile self-service app built side-by-side. It features a secure serverless backend running on **Netlify Functions** and **Supabase**, allowing you to host and scale the entire system for **completely $0**.
+AuraHR is a high-fidelity, interactive, multi-tenant SaaS HR management dashboard and simulated mobile self-service app built side-by-side. It features a secure dual-mode backend (Netlify Serverless Functions for production, and local PHP Proxy for XAMPP environments) connected to a Supabase Cloud PostgreSQL database.
 
 ---
 
 ## ⚡ Architecture & Security Features
 
-* **Secure Backend API**: The client browser no longer connects directly to Supabase. All database reads and writes are routed through a secure Node.js serverless controller (`netlify/functions/api.js`). Your Supabase URL and service role keys are kept **100% hidden on the server** as Netlify environment variables.
-* **Multi-Tenant Isolation**: Multiple companies can use the same database. By switching the **Tenant Selector** in the header, the frontend includes a custom `X-Company-ID` request header. The serverless backend automatically filters all database transactions by company ID.
-* **Graceful Sandbox Fallback**: If the app is run locally without Node/Netlify serverless servers (e.g. double-clicking `index.html`), it automatically falls back to **Local Sandbox Mode** using the browser's `localStorage`. The app remains fully functional for offline pitches.
+* **Dual-Mode Backend Routing**: 
+  * **Production (Netlify)**: Routes `/api/*` requests to serverless Node.js handlers (`netlify/functions/api.js`).
+  * **Local Development (XAMPP)**: Automatically routes requests to a local PHP proxy (`api/index.php`) via `.htaccess` URL rewrites, eliminating the need to install Node.js/npm or Netlify CLI locally.
+* **100% Secret Database Keys**: Supabase URL and keys are stored securely in a local `.env` file (ignored by Git) or within Netlify Site environment variables. They are never exposed to the client browser.
+* **Multi-Tenant Isolation**: Multiple companies share the same database. By changing the **Tenant Selector** in the header, the frontend includes a custom `X-Company-ID` request header, and the backend automatically filters queries (e.g., `WHERE company_id = companyId`).
+* **Graceful Sandbox Fallback**: If both Netlify and the local PHP proxy are offline, the frontend `DB_ENGINE` falls back to **Local Sandbox Mode** using browser `localStorage` for offline presentations.
 
 ---
 
 ## 🛠️ Technology Stack
-* **Frontend UI**: Native HTML5, Vanilla CSS3 (Custom Glassmorphism, animations, dark theme), FontAwesome.
-* **Visual Libraries**: Chart.js (Interactive charts), Leaflet.js (Interactive maps).
-* **Backend API**: Netlify Serverless Functions (Node.js).
+* **Frontend**: Native HTML5, Vanilla CSS3 (Custom Glassmorphism, animations, dark theme), FontAwesome.
+* **Visual Libraries**: Chart.js (Interactive analytics), Leaflet.js (Interactive GPS maps).
+* **Cloud Backend**: Netlify Serverless Functions (Node.js API).
+* **Local Backend**: PHP Proxy (XAMPP compatible).
 * **Database**: Supabase PostgreSQL Cloud.
 
 ---
 
 ## 🚀 Setup & Deployment
 
-### 1. Local Offline Sandbox (Zero Configuration)
-Simply double-click the `index.html` file or run it via XAMPP Apache:
-```
-http://localhost/HR App/
-```
-The application will automatically detect that the serverless API is not active and run in **Local Sandbox Mode** using `localStorage`.
-
----
-
-### 2. Configure Supabase PostgreSQL
-
+### 1. Database Schema & Migration (Supabase)
 1. Create a free project at [supabase.com](https://supabase.com).
-2. Open your project's **SQL Editor** tab and execute the following SQL script to create and configure all multi-tenant tables:
+2. Open your project's **SQL Editor** tab.
+3. If setting up tables for the first time, execute the SQL script below. If you already have existing tables, execute the [migration.sql](file:///d:/xampp/htdocs/HR%20App/migration.sql) script to upgrade your schema.
 
 ```sql
 -- 1. Create Tables
@@ -132,11 +128,26 @@ CREATE INDEX IF NOT EXISTS idx_kpis_company ON public.kpis(company_id);
 
 ---
 
-### 3. Deploy to Netlify (SaaS Cloud Mode)
+### 2. Local Setup (XAMPP Apache + PHP)
+1. Move the `HR App` project folder to your `xampp/htdocs/` directory.
+2. In the project root, create a file named `.env` and fill it with your Supabase credentials:
+   ```env
+   SUPABASE_URL=https://your-project-ref.supabase.co
+   SUPABASE_SERVICE_KEY=your-supabase-access-key
+   ```
+3. Open the XAMPP Control Panel and start **Apache**.
+4. Open your browser and navigate to:
+   ```
+   http://localhost/HR App/
+   ```
+   The application will connect to Supabase through the local PHP proxy API, indicated by **"Live SaaS Cloud DB Active"** in the header.
 
-1. Log in to [Netlify](https://app.netlify.com).
-2. Deploy the project folder by dragging and dropping it into Netlify manual deploy console.
-3. In your Netlify dashboard, navigate to **Site Settings** > **Environment Variables** and add the following two variables:
-   * **`SUPABASE_URL`**: Your Supabase Project API URL (e.g. `https://xxxx.supabase.co`).
-   * **`SUPABASE_SERVICE_KEY`**: Your Supabase **`service_role`** key (from settings > API).
-4. Save and trigger a new deployment. Your site is now fully live and securely connected to your cloud backend database!
+---
+
+### 3. Production Deployment (Netlify)
+1. Push your local Git repository to GitHub.
+2. Log in to [Netlify](https://app.netlify.com/) and create a new site linked to your GitHub repository.
+3. In your Netlify Site dashboard, go to **Site Settings > Environment Variables** (or **Site configuration > Environment variables**) and add:
+   * **`SUPABASE_URL`**: Your Supabase API URL.
+   * **`SUPABASE_SERVICE_KEY`**: Your Supabase private access key (or `service_role` key).
+4. Netlify will build and deploy the application. Your live site is now securely connected to the cloud backend database!
