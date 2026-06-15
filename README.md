@@ -1,58 +1,43 @@
-# AuraHR - Premium SaaS HR Portal & Mobile Simulator
+# AuraHR - Premium SaaS HR Portal & Mobile Simulator (Serverless Edition)
 
-AuraHR is a high-fidelity, interactive SaaS HR management dashboard and simulated mobile self-service app built side-by-side. It is designed as a premium sales demonstration tool to show prospective clients the real-time synergy between HR administrators and remote/office employees.
+AuraHR is a high-fidelity, interactive, multi-tenant SaaS HR management dashboard and simulated mobile self-service app built side-by-side. It features a secure serverless backend running on **Netlify Functions** and **Supabase**, allowing you to host and scale the entire system for **completely $0**.
 
 ---
 
-## ✨ Features & Capabilities
+## ⚡ Architecture & Security Features
 
-### 🏢 1. Admin Web Portal
-* **Dashboard Analytics**: Real-time counters showing total employees, attendance headcounts, pending requests, and monthly budget estimations. Includes dynamic visualization charts (attendance history, department headcount).
-* **Employee Profiles**: Visual directory cards with search filtering by name, role, or department.
-* **Sri Lankan Payroll Suite**: 
-  * Live tax calculations based on progressive APIT (PAYE) thresholds.
-  * **EPF Compliance**: Deducts 8% employee contribution, computes 12% employer contribution.
-  * **ETF Compliance**: Computes 3% employer contribution.
-  * Interactive payslip generator with layout print view.
-* **Leave Management**: Review, approve, or reject casual, annual, and medical leave requests with real-time balance deductions.
-* **Claims & Expense Auditing**: Simulated receipts manager allowing managers to verify invoice uploads and approve/reject claims.
-
-### 📱 2. Mobile App Simulator
-* **Installable PWA**: Responsive interface that converts into a native-feeling mobile app on iOS and Android when added to home screens.
-* **GPS Check-In Tracker**: Integrated Leaflet Maps enabling employees to select coordinates on a map and log attendance status.
-* **Self-Service Requests**: Apply for leaves, submit expense claims (with receipt camera roll mockups), view published monthly payslips, and check KPI goal targets.
+* **Secure Backend API**: The client browser no longer connects directly to Supabase. All database reads and writes are routed through a secure Node.js serverless controller (`netlify/functions/api.js`). Your Supabase URL and service role keys are kept **100% hidden on the server** as Netlify environment variables.
+* **Multi-Tenant Isolation**: Multiple companies can use the same database. By switching the **Tenant Selector** in the header, the frontend includes a custom `X-Company-ID` request header. The serverless backend automatically filters all database transactions by company ID.
+* **Graceful Sandbox Fallback**: If the app is run locally without Node/Netlify serverless servers (e.g. double-clicking `index.html`), it automatically falls back to **Local Sandbox Mode** using the browser's `localStorage`. The app remains fully functional for offline pitches.
 
 ---
 
 ## 🛠️ Technology Stack
 * **Frontend UI**: Native HTML5, Vanilla CSS3 (Custom Glassmorphism, animations, dark theme), FontAwesome.
-* **Visual Libraries**: Chart.js (Interactive analytical charts), Leaflet.js (Interactive dark maps).
-* **Database Engine**: Dual-fallback engine (Supabase PostgreSQL / Browser `localStorage`).
-* **Hosting**: Designed for zero-config deployment on **Netlify** or standard PHP/Apache (XAMPP) servers.
+* **Visual Libraries**: Chart.js (Interactive charts), Leaflet.js (Interactive maps).
+* **Backend API**: Netlify Serverless Functions (Node.js).
+* **Database**: Supabase PostgreSQL Cloud.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Setup & Deployment
 
-### 1. Local Demo Mode (Zero Configuration)
+### 1. Local Offline Sandbox (Zero Configuration)
 Simply double-click the `index.html` file or run it via XAMPP Apache:
 ```
 http://localhost/HR App/
 ```
-By default, the application runs inside a local sandbox using the browser's `localStorage` to save all state changes.
+The application will automatically detect that the serverless API is not active and run in **Local Sandbox Mode** using `localStorage`.
 
 ---
 
-### 2. Connect to Supabase Cloud Database
+### 2. Configure Supabase PostgreSQL
 
-To enable multi-device sync (e.g., loading the mobile app on a real phone and watching updates appear live on a desktop admin panel), connect to a free Supabase PostgreSQL database:
-
-#### A. Set up Supabase
-1. Create a free account at [supabase.com](https://supabase.com).
-2. Open your project's **SQL Editor** tab and execute the following SQL script to create and seed all tables:
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Open your project's **SQL Editor** tab and execute the following SQL script to create and configure all multi-tenant tables:
 
 ```sql
--- Create Tables
+-- 1. Create Tables
 CREATE TABLE public.employees (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -66,6 +51,7 @@ CREATE TABLE public.employees (
     avatar TEXT,
     status TEXT DEFAULT 'offline',
     leave_balances JSONB DEFAULT '{"Annual":12,"Casual":7,"Medical":10}'::jsonb,
+    company_id TEXT DEFAULT 'company_aura',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -78,6 +64,7 @@ CREATE TABLE public.attendance (
     hours NUMERIC DEFAULT 0,
     location TEXT NOT NULL,
     device TEXT NOT NULL,
+    company_id TEXT DEFAULT 'company_aura',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -85,12 +72,13 @@ CREATE TABLE public.leaves (
     id TEXT PRIMARY KEY,
     emp_id TEXT REFERENCES public.employees(id) ON DELETE CASCADE,
     type TEXT NOT NULL,
-    start DATE NOT NULL,
-    end DATE NOT NULL,
+    "start" DATE NOT NULL,
+    "end" DATE NOT NULL,
     reason TEXT NOT NULL,
     status TEXT DEFAULT 'Pending',
     applied_on DATE NOT NULL,
     decider TEXT DEFAULT '',
+    company_id TEXT DEFAULT 'company_aura',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -103,6 +91,7 @@ CREATE TABLE public.claims (
     receipt TEXT,
     status TEXT DEFAULT 'Pending',
     decider TEXT DEFAULT '',
+    company_id TEXT DEFAULT 'company_aura',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -118,6 +107,7 @@ CREATE TABLE public.payslips (
     net NUMERIC NOT NULL,
     epf_employer NUMERIC NOT NULL,
     etf_employer NUMERIC NOT NULL,
+    company_id TEXT DEFAULT 'company_aura',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -127,37 +117,26 @@ CREATE TABLE public.kpis (
     completion INTEGER DEFAULT 0,
     score NUMERIC DEFAULT 3.0,
     feedback TEXT,
+    company_id TEXT DEFAULT 'company_aura',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Seed Initial Employees
-INSERT INTO public.employees (id, name, email, role, dept, salary, allowance, phone, epf_no, avatar, status) VALUES
-('EMP001', 'Kasun Silva', 'kasun.s@aurahr.io', 'Senior Software Engineer', 'Engineering', 135000, 25000, '+94 77 123 4567', 'EPF/2349/E01', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100', 'online'),
-('EMP002', 'Dilini Fernando', 'dilini.f@aurahr.io', 'Lead UI/UX Designer', 'Product', 120000, 15000, '+94 77 987 6543', 'EPF/2349/E02', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100&h=100', 'online'),
-('EMP003', 'Fathima Rizna', 'rizna.f@aurahr.io', 'HR Operations Manager', 'Human Resources', 110000, 10000, '+94 71 555 4321', 'EPF/2349/HR01', 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&q=80&w=100&h=100', 'offline'),
-('EMP004', 'Roshan Perera', 'roshan.p@aurahr.io', 'Marketing Specialist', 'Marketing', 85000, 8000, '+94 72 333 4444', 'EPF/2349/M04', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100&h=100', 'offline'),
-('EMP005', 'Sajith de Silva', 'sajith.d@aurahr.io', 'Senior Accountant', 'Finance', 105000, 12000, '+94 77 444 8888', 'EPF/2349/F05', 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100&h=100', 'online')
-ON CONFLICT (id) DO NOTHING;
-
--- Seed Appraisals/KPIs
-INSERT INTO public.kpis (emp_id, title, completion, score, feedback) VALUES
-('EMP001', 'Complete Core HR Web modules', 85, 4.5, 'Excellent progress in mobile interface integrations.'),
-('EMP002', 'Redesign employee self service views', 100, 4.8, 'Stunning layout revisions; users love the glassmorphism approach.'),
-('EMP003', 'Update legal policy manuals', 60, 3.9, 'Good drafts, requires finishing compliance chapters.'),
-('EMP004', 'Launch marketing campaign', 40, 3.5, 'Need higher engagement on social channels.'),
-('EMP005', 'Complete auditing sheets', 90, 4.2, 'Very meticulous financial calculation logs.')
-ON CONFLICT (emp_id) DO NOTHING;
+-- 2. Create indices for fast multi-tenant lookup
+CREATE INDEX IF NOT EXISTS idx_emp_company ON public.employees(company_id);
+CREATE INDEX IF NOT EXISTS idx_att_company ON public.attendance(company_id);
+CREATE INDEX IF NOT EXISTS idx_leaves_company ON public.leaves(company_id);
+CREATE INDEX IF NOT EXISTS idx_claims_company ON public.claims(company_id);
+CREATE INDEX IF NOT EXISTS idx_payslips_company ON public.payslips(company_id);
+CREATE INDEX IF NOT EXISTS idx_kpis_company ON public.kpis(company_id);
 ```
-
-#### B. Connect App to Cloud
-1. Retrieve your project's **API URL** and **Anon Key** from **Project Settings** > **API**.
-2. Click **Database Config** inside the AuraHR Admin navigation.
-3. Paste the URL and Anon Key and click **Save & Connect**.
-4. The top status bar will change to **Live Cloud DB Connected**.
 
 ---
 
-### 3. Deploy to Netlify (Live Subdomain)
+### 3. Deploy to Netlify (SaaS Cloud Mode)
+
 1. Log in to [Netlify](https://app.netlify.com).
-2. Drag and drop the `HR App` folder containing `index.html`, `style.css`, and `app.js` into the Netlify manual upload panel.
-3. Your web portal and simulator will be live instantly on a public URL!
+2. Deploy the project folder by dragging and dropping it into Netlify manual deploy console.
+3. In your Netlify dashboard, navigate to **Site Settings** > **Environment Variables** and add the following two variables:
+   * **`SUPABASE_URL`**: Your Supabase Project API URL (e.g. `https://xxxx.supabase.co`).
+   * **`SUPABASE_SERVICE_KEY`**: Your Supabase **`service_role`** key (from settings > API).
+4. Save and trigger a new deployment. Your site is now fully live and securely connected to your cloud backend database!

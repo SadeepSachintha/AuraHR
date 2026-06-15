@@ -13,11 +13,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- Interactive Charting, Map and Database CDNs -->
+  <!-- Interactive Charting and Map CDNs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <link rel="stylesheet" href="style.css">
 </head>
@@ -41,6 +40,16 @@
     </div>
     
     <div class="demo-controller">
+      <!-- Tenant Selector Box -->
+      <div class="tenant-selector-box" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--glass-border); padding: 6px 12px; border-radius: 20px;">
+        <i class="fa-solid fa-building text-mute" style="font-size: 0.8rem; color: var(--text-muted);"></i>
+        <select id="saas-tenant-select" onchange="changeActiveTenant()" style="background: transparent; border: none; color: var(--text-main); font-weight: 600; font-size: 0.8rem; outline: none; cursor: pointer; font-family: var(--font-body);">
+          <option value="company_aura" style="background: var(--bg-secondary); color: var(--text-main);">Aura Corporates</option>
+          <option value="company_techcorp" style="background: var(--bg-secondary); color: var(--text-main);">TechCorp Global</option>
+          <option value="company_retailhub" style="background: var(--bg-secondary); color: var(--text-main);">RetailHub LK</option>
+        </select>
+      </div>
+
       <div class="status-indicator">
         <span class="pulse-dot"></span>
         <span id="sync-status">Real-time Local DB Synced</span>
@@ -112,9 +121,6 @@
           </li>
           <li onclick="switchAdminTab('appraisals', this)" id="nav-appraisals">
             <i class="fa-solid fa-trophy"></i> Performance
-          </li>
-          <li onclick="switchAdminTab('settings', this)" id="nav-settings">
-            <i class="fa-solid fa-sliders"></i> Database Config
           </li>
         </ul>
       </nav>
@@ -595,41 +601,6 @@
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
-
-        <!-- VIEW: Settings / Database Configuration -->
-        <div id="view-settings" class="content-view">
-          <div class="view-header">
-            <h2>Database Configuration</h2>
-            <p>Connect your AuraHR instance to a live Supabase cloud database.</p>
-          </div>
-          
-          <div class="table-card glass-inner-card" style="max-width: 650px;">
-            <h3>Supabase API Access Keys</h3>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
-              Pasting your keys here stores them locally in your browser cache. All operations will dynamically switch from localStorage mockups to live cloud database transactions.
-            </p>
-            
-            <form id="db-settings-form" onsubmit="saveDatabaseSettings(event)">
-              <div class="form-group" style="margin-bottom: 1rem;">
-                <label for="db-url">Supabase Project URL</label>
-                <input type="url" id="db-url" placeholder="https://xxxxxxxxxxxxxxxxxxxx.supabase.co" required style="width: 100%;">
-              </div>
-              <div class="form-group" style="margin-bottom: 1rem;">
-                <label for="db-key">Supabase Anonymous Anon Key</label>
-                <input type="password" id="db-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required style="width: 100%;">
-              </div>
-              
-              <div class="action-row">
-                <button type="submit" class="btn btn-primary">
-                  <i class="fa-solid fa-plug"></i> Save & Connect Database
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="clearDatabaseSettings()">
-                  <i class="fa-solid fa-unlink"></i> Disconnect (Use Demo Storage)
-                </button>
-              </div>
-            </form>
           </div>
         </div>
 

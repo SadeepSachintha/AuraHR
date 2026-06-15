@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AuraHR Core Javascript Engine - State Management, Supabase & localStorage Sync
+   AuraHR Core Javascript Engine - State Management, SaaS Client & Fallback Sync
    ========================================================================== */
 
 // 1. Initial / Default Demo Database State
@@ -96,15 +96,15 @@ const INITIAL_DATABASE = {
   kpis: [
     { empId: "EMP001", title: "Complete Core HR Web modules", completion: 85, score: 4.5, feedback: "Excellent progress in mobile interface integrations." },
     { empId: "EMP002", title: "Redesign employee self service views", completion: 100, score: 4.8, feedback: "Stunning layout revisions; users love the glassmorphism approach." },
-    { empId: "EMP003", title: "Update legal policy manuals", completion: 60, score: 3.9, feedback: "Good drafts, requires finishing compliance chapters." },
-    { empId: "EMP004", title: "Launch marketing campaign", completion: 40, score: 3.5, feedback: "Need higher engagement on social channels." },
-    { empId: "EMP005", title: "Complete auditing sheets", completion: 90, score: 4.2, feedback: "Very meticulous financial calculation logs." }
+    { empId: "EMP003", title: "Update legal policy manuals", completion: 60, score: 3.9, feedback: "Good drafts, requires finishing compliance chapters.", company_id: "company_aura" },
+    { empId: "EMP004", title: "Launch marketing campaign", completion: 40, score: 3.5, feedback: "Need higher engagement on social channels.", company_id: "company_aura" },
+    { empId: "EMP005", title: "Complete auditing sheets", completion: 90, score: 4.2, feedback: "Very meticulous financial calculation logs.", company_id: "company_aura" }
   ]
 };
 
 // Global Memory State Variables
-let db = {};         // Local localStorage database
-let liveDb = {};     // Active loaded data (either Supabase or local db)
+let db = {};                  // Local localStorage database sandbox
+let liveDb = {};              // Active loaded data for renders
 let activeMobileEmpId = "EMP001";
 let activeAdminTab = "dashboard";
 let activeMobileScreen = "splash";
@@ -113,6 +113,9 @@ let leafletMap = null;
 let leafletMarker = null;
 let attendanceChartInst = null;
 let departmentChartInst = null;
+
+// Active SaaS company tenant context (default is company_aura)
+let activeCompanyId = "company_aura";
 
 const RECEIPT_PRESETS = [
   "https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&q=80&w=250&h=350",
@@ -130,7 +133,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await renderAll();
 });
 
-// 2. Fallback local database storage helper
+// Fallback local database storage helper
 function initLocalDB() {
   const stored = localStorage.getItem('aura_hr_db');
   if (stored) {
@@ -151,15 +154,15 @@ function saveLocalDB() {
 }
 
 async function resetDemoData() {
-  if (DB_ENGINE.isSupabase()) {
-    const confirmation = confirm("You are currently connected to Supabase Cloud database. Do you want to truncate and re-seed all tables with default values?");
-    if (confirmation) {
-      try {
-        await DB_ENGINE.resetSupabaseData();
-        alert("Cloud Database Re-seeded successfully!");
-      } catch (err) {
-        alert("Failed to seed cloud database: " + err.message);
-      }
+  const confirmation = confirm("This will reset all current demo data to default parameters. Continue?");
+  if (!confirmation) return;
+
+  if (DB_ENGINE.isSaaSActive()) {
+    try {
+      await DB_ENGINE.resetCloudData();
+      alert("SaaS Cloud Tenant Re-seeded successfully!");
+    } catch (err) {
+      alert("Failed to seed cloud database: " + err.message);
     }
   } else {
     db = JSON.parse(JSON.stringify(INITIAL_DATABASE));
@@ -183,7 +186,7 @@ function initTime() {
   }, 1000);
 }
 
-// 3. Leaflet GPS Initializer
+// Leaflet GPS Initializer
 function initLeaflet() {
   leafletMap = L.map('mobile-leaflet-map', {
     zoomControl: false,
@@ -226,7 +229,7 @@ function updateCoordinates(lat, lng) {
 }
 
 // ==========================================================================
-// 4. DATABASE TRANSLATION MAPPERS (PostgreSQL to Frontend JS)
+// 2. DATABASE TRANSLATION MAPPERS (PostgreSQL to Frontend JS)
 // ==========================================================================
 function mapEmployeeFromPg(pg) {
   return {
@@ -390,49 +393,34 @@ function mapKPIToPg(k) {
 }
 
 // ==========================================================================
-// 5. CLOUD DATABASE ENGINE CONTROLLER (Supabase Interface with local fallback)
+// 3. SAAS SERVERLESS BACKEND CLIENT (With automatic localStorage fallback)
 // ==========================================================================
-let supabaseClient = null;
+let isSaaSAPIActive = false;
 
 const DB_ENGINE = {
-  isSupabase: function() {
-    return supabaseClient !== null;
+  isSaaSActive: function() {
+    return isSaaSAPIActive;
   },
 
   init: async function() {
-    const url = localStorage.getItem('supabase_url');
-    const key = localStorage.getItem('supabase_key');
     const syncStatus = document.getElementById("sync-status");
-    
-    if (url && key) {
-      try {
-        // Initialize client using CDN global class
-        supabaseClient = supabase.createClient(url, key);
-        
-        // Quick connection validation query
-        let { data, error } = await supabaseClient.from('employees').select('id').limit(1);
-        if (error) throw error;
-        
-        syncStatus.textContent = "Live Cloud DB Connected";
+    try {
+      // Connect to the Netlify serverless functions API
+      const res = await fetch('/api/employees', {
+        headers: { 'X-Company-ID': activeCompanyId }
+      });
+      if (res.ok) {
+        isSaaSAPIActive = true;
+        syncStatus.textContent = "Live SaaS Cloud DB Active";
         syncStatus.parentElement.style.color = "var(--color-cyan)";
         syncStatus.parentElement.style.borderColor = "rgba(6, 182, 212, 0.3)";
         syncStatus.parentElement.style.backgroundColor = "rgba(6, 182, 212, 0.1)";
-
-        // Set values in the settings inputs
-        const urlInput = document.getElementById("db-url");
-        const keyInput = document.getElementById("db-key");
-        if (urlInput) urlInput.value = url;
-        if (keyInput) keyInput.value = key;
-      } catch (err) {
-        console.error("Supabase failed. Falling back to local storage:", err);
-        supabaseClient = null;
-        syncStatus.textContent = "Supabase API Error - Fallback Active";
-        syncStatus.parentElement.style.color = "var(--color-danger)";
-        syncStatus.parentElement.style.borderColor = "rgba(239, 68, 68, 0.3)";
-        syncStatus.parentElement.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+      } else {
+        throw new Error("Backend API status error");
       }
-    } else {
-      supabaseClient = null;
+    } catch (err) {
+      console.warn("Backend API not reachable. Falling back to local sandbox:", err.message);
+      isSaaSAPIActive = false;
       syncStatus.textContent = "Real-time Local DB Synced";
       syncStatus.parentElement.style.color = "var(--color-success)";
       syncStatus.parentElement.style.borderColor = "rgba(16, 185, 129, 0.2)";
@@ -442,17 +430,26 @@ const DB_ENGINE = {
 
   // Employees Queries
   getEmployees: async function() {
-    if (this.isSupabase()) {
-      const { data, error } = await supabaseClient.from('employees').select('*').order('id', { ascending: true });
-      if (error) { console.error(error); return db.employees; }
-      return data.map(mapEmployeeFromPg);
+    if (this.isSaaSActive()) {
+      try {
+        const res = await fetch('/api/employees', { headers: { 'X-Company-ID': activeCompanyId } });
+        if (res.ok) {
+          const data = await res.json();
+          return data.map(mapEmployeeFromPg);
+        }
+      } catch (e) { console.error("Error fetching employees: ", e); }
     }
     return db.employees;
   },
   saveEmployee: async function(emp) {
-    if (this.isSupabase()) {
-      const { error } = await supabaseClient.from('employees').upsert(mapEmployeeToPg(emp));
-      if (error) console.error("Error upserting employee: ", error);
+    if (this.isSaaSActive()) {
+      try {
+        await fetch('/api/employees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
+          body: JSON.stringify(mapEmployeeToPg(emp))
+        });
+      } catch (e) { console.error("Error saving employee: ", e); }
     } else {
       const idx = db.employees.findIndex(e => e.id === emp.id);
       if (idx !== -1) db.employees[idx] = emp;
@@ -463,25 +460,26 @@ const DB_ENGINE = {
 
   // Attendance Queries
   getAttendance: async function() {
-    if (this.isSupabase()) {
-      const { data, error } = await supabaseClient.from('attendance').select('*').order('id', { ascending: true });
-      if (error) { console.error(error); return db.attendance; }
-      return data.map(mapAttendanceFromPg);
+    if (this.isSaaSActive()) {
+      try {
+        const res = await fetch('/api/attendance', { headers: { 'X-Company-ID': activeCompanyId } });
+        if (res.ok) {
+          const data = await res.json();
+          return data.map(mapAttendanceFromPg);
+        }
+      } catch (e) { console.error("Error fetching attendance: ", e); }
     }
     return db.attendance;
   },
   saveAttendance: async function(att) {
-    if (this.isSupabase()) {
-      const pgObj = mapAttendanceToPg(att);
-      let error;
-      if (att.id) {
-        const { error: err } = await supabaseClient.from('attendance').update(pgObj).eq('id', att.id);
-        error = err;
-      } else {
-        const { error: err } = await supabaseClient.from('attendance').insert([pgObj]);
-        error = err;
-      }
-      if (error) console.error("Error saving attendance: ", error);
+    if (this.isSaaSActive()) {
+      try {
+        await fetch('/api/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
+          body: JSON.stringify(mapAttendanceToPg(att))
+        });
+      } catch (e) { console.error("Error saving attendance: ", e); }
     } else {
       if (att.id) {
         const idx = db.attendance.findIndex(a => a.id === att.id);
@@ -502,17 +500,26 @@ const DB_ENGINE = {
 
   // Leaves Queries
   getLeaves: async function() {
-    if (this.isSupabase()) {
-      const { data, error } = await supabaseClient.from('leaves').select('*').order('created_at', { ascending: true });
-      if (error) { console.error(error); return db.leaves; }
-      return data.map(mapLeaveFromPg);
+    if (this.isSaaSActive()) {
+      try {
+        const res = await fetch('/api/leaves', { headers: { 'X-Company-ID': activeCompanyId } });
+        if (res.ok) {
+          const data = await res.json();
+          return data.map(mapLeaveFromPg);
+        }
+      } catch (e) { console.error("Error fetching leaves: ", e); }
     }
     return db.leaves;
   },
   saveLeave: async function(l) {
-    if (this.isSupabase()) {
-      const { error } = await supabaseClient.from('leaves').upsert(mapLeaveToPg(l));
-      if (error) console.error("Error saving leave: ", error);
+    if (this.isSaaSActive()) {
+      try {
+        await fetch('/api/leaves', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
+          body: JSON.stringify(mapLeaveToPg(l))
+        });
+      } catch (e) { console.error("Error saving leave: ", e); }
     } else {
       const idx = db.leaves.findIndex(x => x.id === l.id);
       if (idx !== -1) db.leaves[idx] = l;
@@ -523,17 +530,26 @@ const DB_ENGINE = {
 
   // Claims Queries
   getClaims: async function() {
-    if (this.isSupabase()) {
-      const { data, error } = await supabaseClient.from('claims').select('*').order('created_at', { ascending: true });
-      if (error) { console.error(error); return db.claims; }
-      return data.map(mapClaimFromPg);
+    if (this.isSaaSActive()) {
+      try {
+        const res = await fetch('/api/claims', { headers: { 'X-Company-ID': activeCompanyId } });
+        if (res.ok) {
+          const data = await res.json();
+          return data.map(mapClaimFromPg);
+        }
+      } catch (e) { console.error("Error fetching claims: ", e); }
     }
     return db.claims;
   },
   saveClaim: async function(c) {
-    if (this.isSupabase()) {
-      const { error } = await supabaseClient.from('claims').upsert(mapClaimToPg(c));
-      if (error) console.error("Error saving claim: ", error);
+    if (this.isSaaSActive()) {
+      try {
+        await fetch('/api/claims', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
+          body: JSON.stringify(mapClaimToPg(c))
+        });
+      } catch (e) { console.error("Error saving claim: ", e); }
     } else {
       const idx = db.claims.findIndex(x => x.id === c.id);
       if (idx !== -1) db.claims[idx] = c;
@@ -544,19 +560,26 @@ const DB_ENGINE = {
 
   // Payslips Queries
   getPayslips: async function() {
-    if (this.isSupabase()) {
-      const { data, error } = await supabaseClient.from('payslips').select('*').order('created_at', { ascending: true });
-      if (error) { console.error(error); return db.payslips; }
-      return data.map(mapPayslipFromPg);
+    if (this.isSaaSActive()) {
+      try {
+        const res = await fetch('/api/payslips', { headers: { 'X-Company-ID': activeCompanyId } });
+        if (res.ok) {
+          const data = await res.json();
+          return data.map(mapPayslipFromPg);
+        }
+      } catch (e) { console.error("Error fetching payslips: ", e); }
     }
     return db.payslips;
   },
   savePayslip: async function(p) {
-    if (this.isSupabase()) {
-      // First clear duplicates for this month and employee
-      await supabaseClient.from('payslips').delete().eq('emp_id', p.empId).eq('month', p.month);
-      const { error } = await supabaseClient.from('payslips').insert([mapPayslipToPg(p)]);
-      if (error) console.error("Error inserting payslip: ", error);
+    if (this.isSaaSActive()) {
+      try {
+        await fetch('/api/payslips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
+          body: JSON.stringify(mapPayslipToPg(p))
+        });
+      } catch (e) { console.error("Error saving payslip: ", e); }
     } else {
       db.payslips = db.payslips.filter(x => !(x.empId === p.empId && x.month === p.month));
       db.payslips.push(p);
@@ -566,17 +589,26 @@ const DB_ENGINE = {
 
   // KPIs Queries
   getKPIs: async function() {
-    if (this.isSupabase()) {
-      const { data, error } = await supabaseClient.from('kpis').select('*');
-      if (error) { console.error(error); return db.kpis; }
-      return data.map(mapKPIFromPg);
+    if (this.isSaaSActive()) {
+      try {
+        const res = await fetch('/api/kpis', { headers: { 'X-Company-ID': activeCompanyId } });
+        if (res.ok) {
+          const data = await res.json();
+          return data.map(mapKPIFromPg);
+        }
+      } catch (e) { console.error("Error fetching KPIs: ", e); }
     }
     return db.kpis;
   },
   saveKPI: async function(k) {
-    if (this.isSupabase()) {
-      const { error } = await supabaseClient.from('kpis').upsert(mapKPIToPg(k));
-      if (error) console.error("Error saving KPI: ", error);
+    if (this.isSaaSActive()) {
+      try {
+        await fetch('/api/kpis', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
+          body: JSON.stringify(mapKPIToPg(k))
+        });
+      } catch (e) { console.error("Error saving KPI: ", e); }
     } else {
       const idx = db.kpis.findIndex(x => x.empId === k.empId);
       if (idx !== -1) db.kpis[idx] = k;
@@ -586,57 +618,27 @@ const DB_ENGINE = {
   },
 
   // Cloud reset utility
-  resetSupabaseData: async function() {
-    if (!this.isSupabase()) return;
-    
-    // Clear all tables
-    await supabaseClient.from('kpis').delete().neq('emp_id', '');
-    await supabaseClient.from('payslips').delete().neq('id', '');
-    await supabaseClient.from('claims').delete().neq('id', '');
-    await supabaseClient.from('leaves').delete().neq('id', '');
-    await supabaseClient.from('attendance').delete().neq('location', '');
-    await supabaseClient.from('employees').delete().neq('id', '');
-
-    // Insert Default Employees
-    const rawEmps = INITIAL_DATABASE.employees.map(mapEmployeeToPg);
-    await supabaseClient.from('employees').insert(rawEmps);
-
-    // Insert Default Appraisals
-    const rawKpis = INITIAL_DATABASE.kpis.map(mapKPIToPg);
-    await supabaseClient.from('kpis').insert(rawKpis);
+  resetCloudData: async function() {
+    if (!this.isSaaSActive()) return;
+    await fetch('/api/reset', {
+      method: 'POST',
+      headers: { 'X-Company-ID': activeCompanyId }
+    });
   }
 };
 
-// Settings Panel Submit Handlers
-async function saveDatabaseSettings(event) {
-  event.preventDefault();
-  const url = document.getElementById("db-url").value.trim();
-  const key = document.getElementById("db-key").value.trim();
-
-  localStorage.setItem('supabase_url', url);
-  localStorage.setItem('supabase_key', key);
-
-  await DB_ENGINE.init();
-  await renderAll();
-  alert("Database settings saved. AuraHR has successfully connected to your Supabase instance!");
-}
-
-async function clearDatabaseSettings() {
-  localStorage.removeItem('supabase_url');
-  localStorage.removeItem('supabase_key');
-
-  const urlInput = document.getElementById("db-url");
-  const keyInput = document.getElementById("db-key");
-  if (urlInput) urlInput.value = "";
-  if (keyInput) keyInput.value = "";
-
-  await DB_ENGINE.init();
-  await renderAll();
-  alert("Database disconnected. Now falling back to local storage sandbox.");
+// SaaS Tenant switcher event handler
+async function changeActiveTenant() {
+  const select = document.getElementById("saas-tenant-select");
+  if (select) {
+    activeCompanyId = select.value;
+    await DB_ENGINE.init();
+    await renderAll();
+  }
 }
 
 // ==========================================================================
-// 6. REACTIVE RENDER CONTROLLER (Pulls database data and redraws screens)
+// 4. REACTIVE RENDER CONTROLLER (Pulls database data and redraws screens)
 // ==========================================================================
 async function renderAll() {
   // Sync active local variables from active storage engine
@@ -1076,6 +1078,7 @@ function printPayslip() {
   }
 }
 
+// Renders visual list of claims
 function renderClaimsView() {
   const pendingTbody = document.getElementById("claims-pending-tbody");
   const historyTbody = document.getElementById("claims-history-tbody");
@@ -1401,7 +1404,7 @@ async function changeMobileActiveUser() {
 }
 
 // ==========================================================================
-// 7. USER EVENT ACTION & NAVIGATION ROUTERS
+// 5. USER EVENT ACTION & NAVIGATION ROUTERS
 // ==========================================================================
 function switchAdminTab(tabId, el) {
   activeAdminTab = tabId;
