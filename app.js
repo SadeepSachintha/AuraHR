@@ -397,6 +397,23 @@ function mapKPIToPg(k) {
 // ==========================================================================
 let isSaaSAPIActive = false;
 
+// Dynamic API Base URL resolver for Netlify & XAMPP Subdirectory compatibility
+function getApiUrl(endpoint) {
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (!isLocalhost) {
+    return `/api/${endpoint}`;
+  }
+  // Detect subdirectory for local XAMPP Apache
+  const path = window.location.pathname;
+  if (path.includes('/api/')) {
+    return path.substring(0, path.indexOf('/api/')) + '/api/' + endpoint;
+  }
+  const lastSlashIdx = path.lastIndexOf('/');
+  const baseDir = lastSlashIdx > 0 ? path.substring(0, lastSlashIdx) : '';
+  // If it's running via netlify dev locally, baseDir might be empty, resulting in /api/endpoint
+  return `${baseDir}/api/${endpoint}`.replace(/\/+/g, '/');
+}
+
 const DB_ENGINE = {
   isSaaSActive: function() {
     return isSaaSAPIActive;
@@ -406,7 +423,7 @@ const DB_ENGINE = {
     const syncStatus = document.getElementById("sync-status");
     try {
       // Connect to the Netlify serverless functions API
-      const res = await fetch('/api/employees', {
+      const res = await fetch(getApiUrl('employees'), {
         headers: { 'X-Company-ID': activeCompanyId }
       });
       if (res.ok) {
@@ -432,7 +449,7 @@ const DB_ENGINE = {
   getEmployees: async function() {
     if (this.isSaaSActive()) {
       try {
-        const res = await fetch('/api/employees', { headers: { 'X-Company-ID': activeCompanyId } });
+        const res = await fetch(getApiUrl('employees'), { headers: { 'X-Company-ID': activeCompanyId } });
         if (res.ok) {
           const data = await res.json();
           return data.map(mapEmployeeFromPg);
@@ -444,7 +461,7 @@ const DB_ENGINE = {
   saveEmployee: async function(emp) {
     if (this.isSaaSActive()) {
       try {
-        await fetch('/api/employees', {
+        await fetch(getApiUrl('employees'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
           body: JSON.stringify(mapEmployeeToPg(emp))
@@ -462,7 +479,7 @@ const DB_ENGINE = {
   getAttendance: async function() {
     if (this.isSaaSActive()) {
       try {
-        const res = await fetch('/api/attendance', { headers: { 'X-Company-ID': activeCompanyId } });
+        const res = await fetch(getApiUrl('attendance'), { headers: { 'X-Company-ID': activeCompanyId } });
         if (res.ok) {
           const data = await res.json();
           return data.map(mapAttendanceFromPg);
@@ -474,7 +491,7 @@ const DB_ENGINE = {
   saveAttendance: async function(att) {
     if (this.isSaaSActive()) {
       try {
-        await fetch('/api/attendance', {
+        await fetch(getApiUrl('attendance'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
           body: JSON.stringify(mapAttendanceToPg(att))
@@ -502,7 +519,7 @@ const DB_ENGINE = {
   getLeaves: async function() {
     if (this.isSaaSActive()) {
       try {
-        const res = await fetch('/api/leaves', { headers: { 'X-Company-ID': activeCompanyId } });
+        const res = await fetch(getApiUrl('leaves'), { headers: { 'X-Company-ID': activeCompanyId } });
         if (res.ok) {
           const data = await res.json();
           return data.map(mapLeaveFromPg);
@@ -514,7 +531,7 @@ const DB_ENGINE = {
   saveLeave: async function(l) {
     if (this.isSaaSActive()) {
       try {
-        await fetch('/api/leaves', {
+        await fetch(getApiUrl('leaves'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
           body: JSON.stringify(mapLeaveToPg(l))
@@ -532,7 +549,7 @@ const DB_ENGINE = {
   getClaims: async function() {
     if (this.isSaaSActive()) {
       try {
-        const res = await fetch('/api/claims', { headers: { 'X-Company-ID': activeCompanyId } });
+        const res = await fetch(getApiUrl('claims'), { headers: { 'X-Company-ID': activeCompanyId } });
         if (res.ok) {
           const data = await res.json();
           return data.map(mapClaimFromPg);
@@ -544,7 +561,7 @@ const DB_ENGINE = {
   saveClaim: async function(c) {
     if (this.isSaaSActive()) {
       try {
-        await fetch('/api/claims', {
+        await fetch(getApiUrl('claims'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
           body: JSON.stringify(mapClaimToPg(c))
@@ -562,7 +579,7 @@ const DB_ENGINE = {
   getPayslips: async function() {
     if (this.isSaaSActive()) {
       try {
-        const res = await fetch('/api/payslips', { headers: { 'X-Company-ID': activeCompanyId } });
+        const res = await fetch(getApiUrl('payslips'), { headers: { 'X-Company-ID': activeCompanyId } });
         if (res.ok) {
           const data = await res.json();
           return data.map(mapPayslipFromPg);
@@ -574,7 +591,7 @@ const DB_ENGINE = {
   savePayslip: async function(p) {
     if (this.isSaaSActive()) {
       try {
-        await fetch('/api/payslips', {
+        await fetch(getApiUrl('payslips'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
           body: JSON.stringify(mapPayslipToPg(p))
@@ -591,7 +608,7 @@ const DB_ENGINE = {
   getKPIs: async function() {
     if (this.isSaaSActive()) {
       try {
-        const res = await fetch('/api/kpis', { headers: { 'X-Company-ID': activeCompanyId } });
+        const res = await fetch(getApiUrl('kpis'), { headers: { 'X-Company-ID': activeCompanyId } });
         if (res.ok) {
           const data = await res.json();
           return data.map(mapKPIFromPg);
@@ -603,7 +620,7 @@ const DB_ENGINE = {
   saveKPI: async function(k) {
     if (this.isSaaSActive()) {
       try {
-        await fetch('/api/kpis', {
+        await fetch(getApiUrl('kpis'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Company-ID': activeCompanyId },
           body: JSON.stringify(mapKPIToPg(k))
@@ -620,7 +637,7 @@ const DB_ENGINE = {
   // Cloud reset utility
   resetCloudData: async function() {
     if (!this.isSaaSActive()) return;
-    await fetch('/api/reset', {
+    await fetch(getApiUrl('reset'), {
       method: 'POST',
       headers: { 'X-Company-ID': activeCompanyId }
     });
