@@ -68,6 +68,18 @@ $method = $_SERVER['REQUEST_METHOD'];
 $rawInput = file_get_contents('php://input');
 $bodyData = json_decode($rawInput, true);
 
+// Helper function to calculate distance using Haversine formula
+function calculateDistance($lat1, $lon1, $lat2, $lon2) {
+    $earthRadius = 6371000; // in meters
+    $dLat = deg2rad($lat2 - $lat1);
+    $dLon = deg2rad($lon2 - $lon1);
+    $a = sin($dLat / 2) * sin($dLat / 2) +
+         cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+         sin($dLon / 2) * sin($dLon / 2);
+    $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+    return $earthRadius * $c;
+}
+
 // 4. Helper Function to call Supabase REST API
 function supabaseRequest($url, $method, $key, $body = null, $extraHeaders = []) {
     $ch = curl_init($url);
@@ -126,6 +138,48 @@ try {
                 echo json_encode($res['data']);
             } elseif ($method === 'POST') {
                 $bodyData['company_id'] = $companyId;
+                
+                // Geofencing verification for mobile clock-in requests
+                $isClockIn = isset($bodyData['clock_in']) && !empty($bodyData['clock_in']) && (!isset($bodyData['clock_out']) || empty($bodyData['clock_out']));
+                if ($isClockIn) {
+                    $lat = isset($bodyData['latitude']) ? floatval($bodyData['latitude']) : null;
+                    $lng = isset($bodyData['longitude']) ? floatval($bodyData['longitude']) : null;
+                    
+                    // Attempt to parse coordinates from simulated location string if not explicitly passed
+                    if (($lat === null || $lng === null) && isset($bodyData['location'])) {
+                        if (preg_match('/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/', $bodyData['location'], $matches)) {
+                            $lat = floatval($matches[1]);
+                            $lng = floatval($matches[2]);
+                        }
+                    }
+                    
+                    if ($lat !== null && $lng !== null) {
+                        // Fetch employee's geofencing details from Supabase
+                        $empUrl = "$supabaseUrl/rest/v1/employees?id=eq." . urlencode($bodyData['emp_id']) . "&select=home_office_lat,home_office_lng,geofence_radius_meters";
+                        $empRes = supabaseRequest($empUrl, 'GET', $supabaseKey);
+                        if ($empRes['status'] === 200 && !empty($empRes['data'])) {
+                            $employee = $empRes['data'][0];
+                            if (isset($employee['home_office_lat']) && isset($employee['home_office_lng'])) {
+                                $distance = calculateDistance(
+                                    $lat,
+                                    $lng,
+                                    floatval($employee['home_office_lat']),
+                                    floatval($employee['home_office_lng'])
+                                );
+                                $allowedRadius = isset($employee['geofence_radius_meters']) ? intval($employee['geofence_radius_meters']) : 200;
+                                if ($distance > $allowedRadius) {
+                                    http_response_code(400);
+                                    echo json_encode([
+                                        "success" => false,
+                                        "error" => "Geofence violation: You are " . round($distance) . "m away from the office. Required within " . $allowedRadius . "m."
+                                    ]);
+                                    exit;
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 if (isset($bodyData['id'])) {
                     // Update existing attendance
                     $url = "$supabaseUrl/rest/v1/attendance?id=eq." . urlencode($bodyData['id']);
@@ -135,6 +189,20 @@ try {
                     $url = "$supabaseUrl/rest/v1/attendance";
                     $res = supabaseRequest($url, 'POST', $supabaseKey, $bodyData);
                 }
+                http_response_code($res['status']);
+                echo json_encode(["success" => $res['status'] < 300]);
+            }
+            break;
+
+        case 'devices':
+            if ($method === 'GET') {
+                $url = "$supabaseUrl/rest/v1/mobile_devices?order=id.asc";
+                $res = supabaseRequest($url, 'GET', $supabaseKey);
+                http_response_code($res['status']);
+                echo json_encode($res['data']);
+            } elseif ($method === 'POST') {
+                $url = "$supabaseUrl/rest/v1/mobile_devices";
+                $res = supabaseRequest($url, 'POST', $supabaseKey, $bodyData, ["Prefer: resolution=merge-duplicates"]);
                 http_response_code($res['status']);
                 echo json_encode(["success" => $res['status'] < 300]);
             }

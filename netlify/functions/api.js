@@ -8,6 +8,19 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
+// Helper function to calculate distance using Haversine formula
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 exports.handler = async (event, context) => {
   // 1. Handle CORS Preflight OPTIONS request
   if (event.httpMethod === 'OPTIONS') {
@@ -86,6 +99,51 @@ exports.handler = async (event, context) => {
           const bodyData = JSON.parse(event.body);
           bodyData.company_id = companyId;
           
+          // Geofencing verification for mobile clock-in requests
+          const isClockIn = bodyData.clock_in && !bodyData.clock_out;
+          if (isClockIn) {
+            let lat = bodyData.latitude;
+            let lng = bodyData.longitude;
+            
+            // Attempt to parse coordinates from the location string if not explicitly passed
+            if ((!lat || !lng) && bodyData.location) {
+              const match = bodyData.location.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
+              if (match) {
+                lat = parseFloat(match[1]);
+                lng = parseFloat(match[2]);
+              }
+            }
+            
+            if (lat && lng) {
+              const { data: employee, error: empErr } = await supabase
+                .from('employees')
+                .select('home_office_lat, home_office_lng, geofence_radius_meters')
+                .eq('id', bodyData.emp_id)
+                .single();
+                
+              if (!empErr && employee && employee.home_office_lat && employee.home_office_lng) {
+                const distance = calculateDistance(
+                  parseFloat(lat),
+                  parseFloat(lng),
+                  parseFloat(employee.home_office_lat),
+                  parseFloat(employee.home_office_lng)
+                );
+                const allowedRadius = employee.geofence_radius_meters || 200;
+                
+                if (distance > allowedRadius) {
+                  return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({
+                      success: false,
+                      error: `Geofence violation: You are ${Math.round(distance)}m away from the office. Required within ${allowedRadius}m.`
+                    })
+                  };
+                }
+              }
+            }
+          }
+          
           let error;
           if (bodyData.id) {
             const { error: err } = await supabase
@@ -99,6 +157,24 @@ exports.handler = async (event, context) => {
               .insert([bodyData]);
             error = err;
           }
+          if (error) throw error;
+          return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+        }
+        break;
+
+      case 'devices':
+        if (method === 'GET') {
+          const { data, error } = await supabase
+            .from('mobile_devices')
+            .select('*')
+            .order('id', { ascending: true });
+          if (error) throw error;
+          return { statusCode: 200, headers, body: JSON.stringify(data) };
+        } else if (method === 'POST') {
+          const bodyData = JSON.parse(event.body);
+          const { data, error } = await supabase
+            .from('mobile_devices')
+            .upsert(bodyData, { onConflict: 'device_token' });
           if (error) throw error;
           return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
         }
