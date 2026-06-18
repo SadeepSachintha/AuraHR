@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import '../models/employee.dart';
 import '../models/attendance.dart';
 import 'attendance_screen.dart';
+import 'self_service_screens.dart';
 
 class HomeScreen extends StatefulWidget {
   final String empId;
@@ -224,24 +225,52 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: 'Leave Portal',
                     subtitle: '${emp.leaveBalances['Annual'] ?? 0} Annual Days',
                     color: Colors.teal,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => LeavePortalScreen(employee: emp),
+                        ),
+                      );
+                    },
                   ),
                   _buildWidgetCard(
                     icon: Icons.receipt_long,
                     title: 'Expense Claims',
                     subtitle: 'Apply reimbursement',
                     color: Colors.orange,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => ExpenseClaimsScreen(empId: emp.id),
+                        ),
+                      );
+                    },
                   ),
                   _buildWidgetCard(
                     icon: Icons.payment,
                     title: 'Payslips',
                     subtitle: 'View monthly breakdown',
                     color: Colors.purple,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => PayslipsScreen(empId: emp.id),
+                        ),
+                      );
+                    },
                   ),
                   _buildWidgetCard(
                     icon: Icons.trending_up,
                     title: 'Appraisals & KPIs',
                     subtitle: 'Check goal progress',
                     color: Colors.blue,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => KpisScreen(empId: emp.id),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -257,48 +286,53 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required String subtitle,
     required Color color,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              shape: BoxShape.circle,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.white.withOpacity(0.5),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white.withOpacity(0.5),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -170,6 +170,27 @@ class ApiService {
     return [];
   }
 
+  // Fetch KPI/Appraisal for employee
+  Future<Map<String, dynamic>?> fetchEmployeeKpi(String empId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${Config.apiUrl}/kpis'),
+        headers: _headers,
+      );
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        final kpi = data.firstWhere(
+          (k) => k['emp_id'] == empId,
+          orElse: () => null,
+        );
+        return kpi;
+      }
+    } catch (e) {
+      print('Error fetching KPI: $e');
+    }
+    return null;
+  }
+
   // Register mobile device token for push notification updates
   Future<bool> registerDevice({
     required String empId,
