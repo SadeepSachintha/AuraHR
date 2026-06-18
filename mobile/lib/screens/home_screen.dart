@@ -174,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 16),
                     const Text(
                       'Shift Schedule: 09:00 AM - 05:00 PM',
-                      style: TextStyle(color: Colors.white55, fontSize: 13),
+                      style: TextStyle(color: Colors.white54, fontSize: 13),
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
