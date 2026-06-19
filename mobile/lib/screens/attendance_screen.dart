@@ -137,6 +137,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
 
     final result = await _apiService.clockInOrOut(att);
+    if (!mounted) return;
     setState(() => _isSubmitting = false);
 
     if (result['success'] == true) {

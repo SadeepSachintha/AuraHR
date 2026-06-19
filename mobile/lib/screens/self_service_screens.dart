@@ -31,6 +31,7 @@ class _LeavePortalScreenState extends State<LeavePortalScreen> {
   Future<void> _loadLeaves() async {
     setState(() => _isLoading = true);
     final history = await _apiService.fetchLeaves(widget.employee.id);
+    if (!mounted) return;
     setState(() {
       _leaves = history;
       _isLoading = false;
@@ -523,6 +524,7 @@ class _ExpenseClaimsScreenState extends State<ExpenseClaimsScreen> {
   Future<void> _loadClaims() async {
     setState(() => _isLoading = true);
     final history = await _apiService.fetchClaims(widget.empId);
+    if (!mounted) return;
     setState(() {
       _claims = history;
       _isLoading = false;
@@ -893,6 +895,7 @@ class _PayslipsScreenState extends State<PayslipsScreen> {
   Future<void> _loadPayslips() async {
     setState(() => _isLoading = true);
     final history = await _apiService.fetchPayslips(widget.empId);
+    if (!mounted) return;
     setState(() {
       _payslips = history;
       _isLoading = false;
@@ -1094,6 +1097,7 @@ class _KpisScreenState extends State<KpisScreen> {
   Future<void> _loadKpis() async {
     setState(() => _isLoading = true);
     final data = await _apiService.fetchEmployeeKpi(widget.empId);
+    if (!mounted) return;
     setState(() {
       _kpiData = data;
       _isLoading = false;

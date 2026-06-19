@@ -29,9 +29,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
     final emp = await _apiService.fetchEmployeeProfile(widget.empId);
+    if (!mounted) return;
     if (emp != null) {
       // Mock loading today's shift log status
       final logs = await _apiService.fetchAttendanceLogs(widget.empId);
+      if (!mounted) return;
       final todayStr = DateTime.now().toIso8601String().split('T')[0];
       final todayLog = logs.where((l) => l.date == todayStr).toList();
       
