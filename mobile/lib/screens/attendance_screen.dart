@@ -172,78 +172,111 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         title: const Text('GPS Geofenced Clock-in'),
         backgroundColor: const Color(0xFF1E293B),
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.04),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
-                ),
-                child: Icon(
-                  Icons.location_searching,
-                  size: 64,
-                  color: _currentPosition != null ? Colors.greenAccent : Colors.indigoAccent,
+      body: Stack(
+        children: [
+          // Background static map (only loads if current position is available)
+          if (_currentPosition != null)
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.22, // Subtle map visibility
+                child: Image.network(
+                  'https://static-maps.yandex.ru/1.x/?ll=${_currentPosition!.longitude},${_currentPosition!.latitude}&size=650,450&z=15&l=map&pt=${_currentPosition!.longitude},${_currentPosition!.latitude},pm2gnm',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF0F172A)),
                 ),
               ),
-              const SizedBox(height: 32),
-              Text(
-                _statusMessage,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, color: Colors.white70),
+            ),
+          // Gradient cover overlay to blend map and keep text highly readable
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF0F172A).withOpacity(0.9),
+                    const Color(0xFF0F172A).withOpacity(0.55),
+                    const Color(0xFF0F172A).withOpacity(0.92),
+                  ],
+                ),
               ),
-              if (_currentPosition != null) ...[
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.04),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Latitude: ${_currentPosition!.latitude.toStringAsFixed(6)}',
-                        style: const TextStyle(fontSize: 15, fontFamily: 'monospace', color: Colors.white70),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Longitude: ${_currentPosition!.longitude.toStringAsFixed(6)}',
-                        style: const TextStyle(fontSize: 15, fontFamily: 'monospace', color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 48),
-              if (_isSubmitting)
-                const CircularProgressIndicator()
-              else
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _currentPosition == null ? null : _submitAttendance,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.isClockedIn ? Colors.redAccent : const Color(0xFF6366F1),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: Text(
-                      widget.isClockedIn ? 'Clock Out Today' : 'Confirm Clock In Location',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-            ],
+            ),
           ),
-        ),
+          // Content
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.04),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    child: Icon(
+                      Icons.location_searching,
+                      size: 64,
+                      color: _currentPosition != null ? Colors.greenAccent : Colors.indigoAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Text(
+                    _statusMessage,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16, color: Colors.white70),
+                  ),
+                  if (_currentPosition != null) ...[
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.04),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Latitude: ${_currentPosition!.latitude.toStringAsFixed(6)}',
+                            style: const TextStyle(fontSize: 15, fontFamily: 'monospace', color: Colors.white70),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Longitude: ${_currentPosition!.longitude.toStringAsFixed(6)}',
+                            style: const TextStyle(fontSize: 15, fontFamily: 'monospace', color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 48),
+                  if (_isSubmitting)
+                    const CircularProgressIndicator()
+                  else
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _currentPosition == null ? null : _submitAttendance,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: widget.isClockedIn ? Colors.redAccent : const Color(0xFF6366F1),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: Text(
+                          widget.isClockedIn ? 'Clock Out Today' : 'Confirm Clock In Location',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
