@@ -3,6 +3,8 @@ A Product of [SS Labz](https://ss-labz.pages.dev/)
 
 AuraHR is a high-fidelity, interactive, multi-tenant SaaS HR management dashboard and simulated mobile self-service app built side-by-side. It features a secure dual-mode backend (Netlify Serverless Functions for production, and local PHP Proxy for XAMPP environments) connected to a Supabase Cloud PostgreSQL database.
 
+The suite also includes **Progressive Web App (PWA)** capabilities for offline capability and installation, as well as a companion **Flutter Mobile Simulator** designed for employees to manage attendance (with geolocated GPS validation), leaves, claims, and payslips on the go.
+
 ---
 
 ## ⚡ Architecture & Security Features
@@ -13,15 +15,41 @@ AuraHR is a high-fidelity, interactive, multi-tenant SaaS HR management dashboar
 * **100% Secret Database Keys**: Supabase URL and keys are stored securely in a local `.env` file (ignored by Git) or within Netlify Site environment variables. They are never exposed to the client browser.
 * **Multi-Tenant Isolation**: Multiple companies share the same database. By changing the **Tenant Selector** in the header, the frontend includes a custom `X-Company-ID` request header, and the backend automatically filters queries (e.g., `WHERE company_id = companyId`).
 * **Graceful Sandbox Fallback**: If both Netlify and the local PHP proxy are offline, the frontend `DB_ENGINE` falls back to **Local Sandbox Mode** using browser `localStorage` for offline presentations.
+* **Progressive Web App (PWA)**:
+  * Includes a [Web App Manifest](file:///d:/xampp/htdocs/HR%20App/manifest.json) supporting standard and maskable icons (`192x192` and `512x512` pixels), standalone viewport, and dark themes.
+  * Uses a dedicated [Service Worker](file:///d:/xampp/htdocs/HR%20App/sw.js) implements an **Offline Cache-First Strategy** for static assets (HTML, CSS, JS, manifest, and icons), while bypassing API routes to ensure live server communication takes precedence.
+* **Mobile Simulator Integration**:
+  * Connected via HTTP REST APIs to the PHP proxy or Netlify endpoint.
+  * Implements automatic platform-based routing (`10.0.2.2` for Android Emulator loopbacks and localhost/127.0.0.1 for Web and physical devices).
 
 ---
 
 ## 🛠️ Technology Stack
-* **Frontend**: Native HTML5, Vanilla CSS3 (Custom Glassmorphism, animations, dark theme), FontAwesome.
-* **Visual Libraries**: Chart.js (Interactive analytics), Leaflet.js (Interactive GPS maps).
+
+* **Web Portal (Frontend)**: Native HTML5, Vanilla CSS3 (Custom Glassmorphism, animations, dark theme), FontAwesome.
+* **Service Worker / PWA**: Native Javascript caching APIs (`sw.js`).
+* **Mobile Simulator**: Flutter (Dart) utilizing Material 3 design and the `Outfit` custom typography.
+* **Visual & Geolocation Libraries**: Chart.js (Interactive web analytics), Leaflet.js (Web GPS map tracker), Geolocator (Flutter native GPS locator), static mapping APIs.
 * **Cloud Backend**: Netlify Serverless Functions (Node.js API).
 * **Local Backend**: PHP Proxy (XAMPP compatible).
 * **Database**: Supabase PostgreSQL Cloud.
+
+---
+
+## 📱 Mobile App Screens & Features
+
+Located in the [/mobile](file:///d:/xampp/htdocs/HR%20App/mobile) subdirectory, the Flutter mobile simulator contains the following features:
+
+1. **Biometric Bypass Splash Screen**: Simulated fingerprint biometric gateway to unlock employee workspace instantly without manual login friction.
+2. **Interactive Employee Dashboard**: Displays active shift status (clocked in/out), recent activities, and quick actions to access services.
+3. **GPS Geofenced Clock-in/out Screen**:
+   - Acquires lock on native GPS coordinates using the `geolocator` plugin.
+   - Automatically handles mock location simulation for environments where hardware GPS is unavailable (e.g., Windows builds).
+   - Dynamically renders location markers on an interactive static map using GPS latitude/longitude.
+4. **Self-Service Modules**:
+   - **Leave Portal**: Real-time indicators of Annual, Casual, and Medical leave balances. Includes forms to select leave dates and submit application requests to the cloud DB.
+   - **Expense Claims**: Multi-category claim submissions (Travel, Meals, Internet, Medical). Simulates uploading image receipts via Unsplash presets.
+   - **Payslips**: Comprehensive overview of earnings (basic + allowance), deductions (taxes, EPF, ETF), and employer contributions, with detailed calculations.
 
 ---
 
@@ -151,3 +179,22 @@ CREATE INDEX IF NOT EXISTS idx_kpis_company ON public.kpis(company_id);
    * **`SUPABASE_URL`**: Your Supabase API URL.
    * **`SUPABASE_SERVICE_KEY`**: Your Supabase private access key (or `service_role` key).
 4. Netlify will build and deploy the application. Your live site is now securely connected to the cloud backend database!
+
+---
+
+### 4. Running the Mobile Simulator (Flutter)
+1. Ensure the Flutter SDK is installed and configured on your machine.
+2. Open a terminal and navigate to the mobile folder:
+   ```bash
+   cd mobile
+   ```
+3. Fetch dependencies:
+   ```bash
+   flutter pub get
+   ```
+4. Configure target API IP in [lib/config.dart](file:///d:/xampp/htdocs/HR%20App/mobile/lib/config.dart) if custom proxy addresses are used.
+5. Launch your target device (Android Emulator, iOS Simulator, or Chrome) and run:
+   ```bash
+   flutter run
+   ```
+   *Note: For Android Emulators, the config automatically routes requests to the local machine using the loopback IP `10.0.2.2` to communicate with the XAMPP server.*
