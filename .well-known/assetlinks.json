@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.netlify.aurahrapp.twa",
+        "sha256_cert_fingerprints": ["CF:82:1C:AF:B9:C8:62:E1:A7:D6:40:4B:24:39:02:56:83:54:DE:AE:0B:F9:3D:1C:5D:00:AC:95:9A:20:05:34"]
+      }
+    }]
