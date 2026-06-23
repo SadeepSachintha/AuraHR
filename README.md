@@ -198,3 +198,8 @@ CREATE INDEX IF NOT EXISTS idx_kpis_company ON public.kpis(company_id);
    flutter run
    ```
    *Note: For Android Emulators, the config automatically routes requests to the local machine using the loopback IP `10.0.2.2` to communicate with the XAMPP server.*
+6. To compile a production-ready `.aab` file for Google Play upload, run:
+   ```bash
+   flutter build appbundle --release
+   ```
+   For details on setting up keystore signing and resolving cross-drive Windows path errors during release compilation, check the [mobile README](file:///d:/xampp/htdocs/HR%20App/mobile/README.md).

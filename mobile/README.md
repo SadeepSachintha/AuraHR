@@ -114,3 +114,36 @@ Or target specific platforms:
 flutter run -d chrome       # Runs web client representation
 flutter run -d windows      # Runs windows desktop build (applies GPS simulations)
 ```
+
+---
+
+## 📦 Building for Production / Release (Google Play)
+
+To build the native Android App Bundle (`.aab`) for Google Play Store upload:
+
+### 1. Configure Production API Endpoint
+The app automatically detects if it is running in release mode. It uses the production API base configured in [lib/config.dart](file:///d:/xampp/htdocs/HR%20App/mobile/lib/config.dart):
+* **Debug Mode:** Connects to `localhost` or Android loopback `10.0.2.2`.
+* **Release Mode:** Connects to the live production database proxy at `https://aurahrapp.netlify.app/api`.
+
+### 2. Signing Configuration
+Release builds must be signed with your original keystore. 
+1. Create a `mobile/android/key.properties` file with your credentials:
+   ```properties
+   storePassword=your_store_password
+   keyPassword=your_key_password
+   keyAlias=your_key_alias
+   storeFile=signing.keystore
+   ```
+2. Place the corresponding `signing.keystore` file inside the `mobile/android/app/` folder.
+
+### 3. Compile the Release Bundle
+Run the compiler from the `mobile` directory:
+```bash
+flutter build appbundle --release
+```
+The output production bundle will be generated at:
+`mobile/build/app/outputs/bundle/release/app-release.aab`
+
+> [!NOTE]
+> If building on Windows where the project is on a different drive than the global Flutter pub cache (e.g. project on `D:` and cache on `C:`), incremental compilation is automatically disabled in `mobile/android/gradle.properties` (`kotlin.incremental=false`) to prevent compiler failures.
