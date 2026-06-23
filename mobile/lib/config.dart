@@ -4,6 +4,9 @@ class Config {
   // Use http://10.0.2.2/HR%20App/api/ for Android emulator to reference localhost
   // Use http://localhost/HR%20App/api/ for Web and iOS/Windows/macOS platforms
   static String get apiUrl {
+    if (kReleaseMode) {
+      return 'https://aurahrapp.netlify.app/api';
+    }
     if (kIsWeb) {
       return 'http://127.0.0.1/HR%20App/api';
     }
