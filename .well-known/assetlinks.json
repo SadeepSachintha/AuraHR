@@ -2,7 +2,7 @@
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
         "namespace": "android_app",
-        "package_name": "app.netlify.aurahrapp.twa",
-        "sha256_cert_fingerprints": ["CF:82:1C:AF:B9:C8:62:E1:A7:D6:40:4B:24:39:02:56:83:54:DE:AE:0B:F9:3D:1C:5D:00:AC:95:9A:20:05:34"]
+        "package_name": "com.sslabz.aurahr",
+        "sha256_cert_fingerprints": ["40:F2:F0:8D:65:99:27:10:BD:7D:A2:59:BC:28:C9:5B:2B:8B:3A:77:4B:56:E7:10:88:5B:CF:00:28:83:F6:DA"]
       }
     }]
