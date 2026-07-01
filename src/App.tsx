@@ -53,8 +53,8 @@ const App: React.FC = () => {
     const leaveList = await API_SERVICE.getLeaves(companyId);
     const claimList = await API_SERVICE.getClaims(companyId);
     const kpiList = await API_SERVICE.getKPIs(companyId);
-    const projList = await API_SERVICE.getProjects();
-    const taskList = await API_SERVICE.getTasks();
+    const projList = await API_SERVICE.getProjects(companyId);
+    const taskList = await API_SERVICE.getTasks(companyId);
 
     setEmployees(empList);
     setAttendance(attList);
@@ -130,7 +130,7 @@ const App: React.FC = () => {
   };
 
   const handleAddTask = async (newTask: Task) => {
-    await API_SERVICE.saveTask(newTask);
+    await API_SERVICE.saveTask(newTask, companyId);
     triggerToast(`Task "${newTask.title}" assigned successfully.`, 'success');
     loadData();
   };
@@ -145,7 +145,7 @@ const App: React.FC = () => {
     };
 
     // If completed, check if we should update project progress
-    await API_SERVICE.saveTask(updatedTask);
+    await API_SERVICE.saveTask(updatedTask, companyId);
     
     // Recalculate project progress
     const projectTasks = tasks.map(t => t.id === taskId ? updatedTask : t).filter(t => t.project_id === task.project_id);
@@ -159,7 +159,7 @@ const App: React.FC = () => {
         progress,
         status: progress === 100 ? 'Completed' : 'Active'
       };
-      await API_SERVICE.saveProject(updatedProj);
+      await API_SERVICE.saveProject(updatedProj, companyId);
     }
 
     triggerToast(`Task moved to ${newStatus}.`, 'success');

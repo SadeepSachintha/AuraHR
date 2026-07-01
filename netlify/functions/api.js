@@ -251,6 +251,58 @@ exports.handler = async (event, context) => {
         }
         break;
 
+      case 'projects':
+        if (method === 'GET') {
+          const { data, error } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('company_id', companyId)
+            .order('id', { ascending: true });
+          if (error) throw error;
+          return { statusCode: 200, headers, body: JSON.stringify(data) };
+        } else if (method === 'POST') {
+          const bodyData = JSON.parse(event.body);
+          bodyData.company_id = companyId;
+          const { data, error } = await supabase
+            .from('projects')
+            .upsert(bodyData);
+          if (error) throw error;
+          return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+        }
+        break;
+
+      case 'tasks':
+        if (method === 'GET') {
+          // Parse query filters
+          const queryParams = event.queryStringParameters || {};
+          let empFilter = queryParams.emp_id || '';
+          if (empFilter.startsWith('eq.')) {
+            empFilter = empFilter.substring(3);
+          }
+          
+          let query = supabase
+            .from('tasks')
+            .select('*')
+            .eq('company_id', companyId);
+            
+          if (empFilter) {
+            query = query.eq('emp_id', empFilter);
+          }
+          
+          const { data, error } = await query.order('id', { ascending: true });
+          if (error) throw error;
+          return { statusCode: 200, headers, body: JSON.stringify(data) };
+        } else if (method === 'POST') {
+          const bodyData = JSON.parse(event.body);
+          bodyData.company_id = companyId;
+          const { data, error } = await supabase
+            .from('tasks')
+            .upsert(bodyData);
+          if (error) throw error;
+          return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+        }
+        break;
+
       case 'kpis':
         if (method === 'GET') {
           const { data, error } = await supabase
@@ -274,6 +326,8 @@ exports.handler = async (event, context) => {
       case 'reset':
         if (method === 'POST') {
           // 1. Wipe only this company's tables
+          await supabase.from('tasks').delete().eq('company_id', companyId);
+          await supabase.from('projects').delete().eq('company_id', companyId);
           await supabase.from('kpis').delete().eq('company_id', companyId);
           await supabase.from('payslips').delete().eq('company_id', companyId);
           await supabase.from('claims').delete().eq('company_id', companyId);
@@ -290,6 +344,23 @@ exports.handler = async (event, context) => {
             { id: "EMP005", name: "Sajith de Silva", email: "sajith.d@aurahr.io", role: "Senior Accountant", dept: "Finance", salary: 105000, allowance: 12000, phone: "+94 77 444 8888", epf_no: "EPF/2349/F05", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100&h=100", status: "online", company_id: companyId }
           ];
           await supabase.from('employees').insert(defaultEmployees);
+
+          // Default Projects
+          const defaultProjects = [
+            { id: "P-1", name: "Aura Web Portal v2.0", status: "Active", deadline: "2026-08-15", progress: 68, company_id: companyId },
+            { id: "P-2", name: "Mobile Biometric Engine", status: "Active", deadline: "2026-07-20", progress: 45, company_id: companyId },
+            { id: "P-3", name: "Compliance & Payroll Audit", status: "Completed", deadline: "2026-06-30", progress: 100, company_id: companyId }
+          ];
+          await supabase.from('projects').insert(defaultProjects);
+
+          // Default Tasks
+          const defaultTasks = [
+            { id: "T-1", project_id: "P-1", emp_id: "EMP001", title: "Migrate Portal to React & Tailwind CSS", status: "in-progress", due_date: "2026-07-05", company_id: companyId },
+            { id: "T-2", project_id: "P-1", emp_id: "EMP002", title: "Implement Glassmorphism Dark Mode Styling", status: "completed", due_date: "2026-06-28", company_id: companyId },
+            { id: "T-3", project_id: "P-3", emp_id: "EMP005", title: "Verify Sri Lankan EPF/ETF compliance math", status: "todo", due_date: "2026-07-10", company_id: companyId },
+            { id: "T-4", project_id: "P-2", emp_id: "EMP001", title: "Resolve GPS accuracy & geofence validation lag", status: "in-progress", due_date: "2026-06-25", company_id: companyId }
+          ];
+          await supabase.from('tasks').insert(defaultTasks);
 
           // Default KPI definition
           const defaultKpis = [

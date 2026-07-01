@@ -258,6 +258,41 @@ try {
             }
             break;
 
+        case 'projects':
+            if ($method === 'GET') {
+                $url = "$supabaseUrl/rest/v1/projects?company_id=eq." . urlencode($companyId) . "&order=id.asc";
+                $res = supabaseRequest($url, 'GET', $supabaseKey);
+                http_response_code($res['status']);
+                echo json_encode($res['data']);
+            } elseif ($method === 'POST') {
+                $bodyData['company_id'] = $companyId;
+                $url = "$supabaseUrl/rest/v1/projects";
+                $res = supabaseRequest($url, 'POST', $supabaseKey, $bodyData, ["Prefer: resolution=merge-duplicates"]);
+                http_response_code($res['status']);
+                echo json_encode(["success" => $res['status'] < 300]);
+            }
+            break;
+
+        case 'tasks':
+            if ($method === 'GET') {
+                $empFilter = isset($_GET['emp_id']) ? $_GET['emp_id'] : '';
+                $url = "$supabaseUrl/rest/v1/tasks?company_id=eq." . urlencode($companyId);
+                if (!empty($empFilter)) {
+                    $url .= "&emp_id=" . urlencode($empFilter);
+                }
+                $url .= "&order=id.asc";
+                $res = supabaseRequest($url, 'GET', $supabaseKey);
+                http_response_code($res['status']);
+                echo json_encode($res['data']);
+            } elseif ($method === 'POST') {
+                $bodyData['company_id'] = $companyId;
+                $url = "$supabaseUrl/rest/v1/tasks";
+                $res = supabaseRequest($url, 'POST', $supabaseKey, $bodyData, ["Prefer: resolution=merge-duplicates"]);
+                http_response_code($res['status']);
+                echo json_encode(["success" => $res['status'] < 300]);
+            }
+            break;
+
         case 'kpis':
             if ($method === 'GET') {
                 $url = "$supabaseUrl/rest/v1/kpis?company_id=eq." . urlencode($companyId);
@@ -276,7 +311,7 @@ try {
         case 'reset':
             if ($method === 'POST') {
                 // Delete current tenant's data sequentially
-                $entities = ['kpis', 'payslips', 'claims', 'leaves', 'attendance', 'employees'];
+                $entities = ['tasks', 'projects', 'kpis', 'payslips', 'claims', 'leaves', 'attendance', 'employees'];
                 foreach ($entities as $entity) {
                     $delUrl = "$supabaseUrl/rest/v1/$entity?company_id=eq." . urlencode($companyId);
                     supabaseRequest($delUrl, 'DELETE', $supabaseKey);
@@ -291,6 +326,23 @@ try {
                     [ "id" => "EMP005", "name" => "Sajith de Silva", "email" => "sajith.d@aurahr.io", "role" => "Senior Accountant", "dept" => "Finance", "salary" => 105000, "allowance" => 12000, "phone" => "+94 77 444 8888", "epf_no" => "EPF/2349/F05", "avatar" => "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100&h=100", "status" => "online", "company_id" => $companyId ]
                 ];
                 supabaseRequest("$supabaseUrl/rest/v1/employees", 'POST', $supabaseKey, $defaultEmployees);
+
+                // Default Projects
+                $defaultProjects = [
+                    [ "id" => "P-1", "name" => "Aura Web Portal v2.0", "status" => "Active", "deadline" => "2026-08-15", "progress" => 68, "company_id" => $companyId ],
+                    [ "id" => "P-2", "name" => "Mobile Biometric Engine", "status" => "Active", "deadline" => "2026-07-20", "progress" => 45, "company_id" => $companyId ],
+                    [ "id" => "P-3", "name" => "Compliance & Payroll Audit", "status" => "Completed", "deadline" => "2026-06-30", "progress" => 100, "company_id" => $companyId ]
+                ];
+                supabaseRequest("$supabaseUrl/rest/v1/projects", 'POST', $supabaseKey, $defaultProjects);
+
+                // Default Tasks
+                $defaultTasks = [
+                    [ "id" => "T-1", "project_id" => "P-1", "emp_id" => "EMP001", "title" => "Migrate Portal to React & Tailwind CSS", "status" => "in-progress", "due_date" => "2026-07-05", "company_id" => $companyId ],
+                    [ "id" => "T-2", "project_id" => "P-1", "emp_id" => "EMP002", "title" => "Implement Glassmorphism Dark Mode Styling", "status" => "completed", "due_date" => "2026-06-28", "company_id" => $companyId ],
+                    [ "id" => "T-3", "project_id" => "P-3", "emp_id" => "EMP005", "title" => "Verify Sri Lankan EPF/ETF compliance math", "status" => "todo", "due_date" => "2026-07-10", "company_id" => $companyId ],
+                    [ "id" => "T-4", "project_id" => "P-2", "emp_id" => "EMP001", "title" => "Resolve GPS accuracy & geofence validation lag", "status" => "in-progress", "due_date" => "2026-06-25", "company_id" => $companyId ]
+                ];
+                supabaseRequest("$supabaseUrl/rest/v1/tasks", 'POST', $supabaseKey, $defaultTasks);
 
                 // Default KPIs definition
                 $defaultKpis = [

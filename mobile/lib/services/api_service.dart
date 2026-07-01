@@ -6,6 +6,7 @@ import '../models/attendance.dart';
 import '../models/leave.dart';
 import '../models/claim.dart';
 import '../models/payslip.dart';
+import '../models/task.dart';
 
 class ApiService {
   final String companyId;
@@ -210,6 +211,45 @@ class ApiService {
       return response.statusCode == 200;
     } catch (e) {
       print('Error registering device token: $e');
+      return false;
+    }
+  }
+
+  // Fetch task lists assigned to employee
+  Future<List<Task>> fetchTasks(String empId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${Config.apiUrl}/tasks?emp_id=eq.$empId'),
+        headers: _headers,
+      );
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        return data.map((json) => Task.fromJson(json)).toList();
+      }
+    } catch (e) {
+      print('Error fetching tasks: $e');
+    }
+    return [];
+  }
+
+  // Update status state of task
+  Future<bool> updateTaskStatus(Task task, String newStatus) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${Config.apiUrl}/tasks'),
+        headers: _headers,
+        body: json.encode({
+          'id': task.id,
+          'project_id': task.projectId,
+          'emp_id': task.empId,
+          'title': task.title,
+          'status': newStatus,
+          'due_date': task.dueDate,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error updating task: $e');
       return false;
     }
   }

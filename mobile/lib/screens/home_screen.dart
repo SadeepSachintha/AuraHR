@@ -4,6 +4,7 @@ import '../models/employee.dart';
 import '../models/attendance.dart';
 import 'attendance_screen.dart';
 import 'self_service_screens.dart';
+import 'tasks_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String empId;
@@ -270,6 +271,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => KpisScreen(empId: emp.id),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildWidgetCard(
+                    icon: Icons.task_alt,
+                    title: 'My Tasks',
+                    subtitle: 'Manage active jobs',
+                    color: Colors.pink,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => TasksScreen(empId: emp.id),
                         ),
                       );
                     },

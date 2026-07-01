@@ -436,12 +436,39 @@ export const API_SERVICE = {
     saveLocalDb();
   },
 
-  // Projects & Tasks: Keep in localStorage for compatibility, since database table endpoints do not support them yet
-  getProjects: async function (): Promise<Project[]> {
+  // Projects & Tasks: Sync with database if online
+  getProjects: async function (companyId: string): Promise<Project[]> {
+    if (this.isSaaSActive) {
+      try {
+        const res = await fetch(getApiUrl('projects'), {
+          headers: { 'X-Company-ID': companyId }
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (e) {
+        console.error("Error fetching projects", e);
+      }
+    }
     return localDb.projects;
   },
 
-  saveProject: async function (proj: Project): Promise<void> {
+  saveProject: async function (proj: Project, companyId: string): Promise<void> {
+    if (this.isSaaSActive) {
+      try {
+        await fetch(getApiUrl('projects'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Company-ID': companyId
+          },
+          body: JSON.stringify(proj)
+        });
+        return;
+      } catch (e) {
+        console.error("Error saving project to API", e);
+      }
+    }
     const idx = localDb.projects.findIndex(p => p.id === proj.id);
     if (idx !== -1) {
       localDb.projects[idx] = proj;
@@ -451,11 +478,38 @@ export const API_SERVICE = {
     saveLocalDb();
   },
 
-  getTasks: async function (): Promise<Task[]> {
+  getTasks: async function (companyId: string): Promise<Task[]> {
+    if (this.isSaaSActive) {
+      try {
+        const res = await fetch(getApiUrl('tasks'), {
+          headers: { 'X-Company-ID': companyId }
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (e) {
+        console.error("Error fetching tasks", e);
+      }
+    }
     return localDb.tasks;
   },
 
-  saveTask: async function (t: Task): Promise<void> {
+  saveTask: async function (t: Task, companyId: string): Promise<void> {
+    if (this.isSaaSActive) {
+      try {
+        await fetch(getApiUrl('tasks'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Company-ID': companyId
+          },
+          body: JSON.stringify(t)
+        });
+        return;
+      } catch (e) {
+        console.error("Error saving task to API", e);
+      }
+    }
     const idx = localDb.tasks.findIndex(x => x.id === t.id);
     if (idx !== -1) {
       localDb.tasks[idx] = t;
