@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0B0F19] text-gray-100 font-sans antialiased overflow-x-hidden;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.09) 0px, transparent 45%),
+      radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.09) 0px, transparent 45%),
+      radial-gradient(at 50% 50%, rgba(79, 70, 229, 0.06) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+/* Glassmorphism custom components */
+@layer components {
+  .glass-panel {
+    background: rgba(17, 24, 39, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .glass-panel-glow {
+    background: rgba(17, 24, 39, 0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    box-shadow: 0 8px 32px 0 rgba(6, 182, 212, 0.15);
+  }
+
+  .glass-inner-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+  }
+
+  .glass-input {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    @apply rounded-xl px-4 py-2 text-white outline-none focus:border-cyan-500 focus:bg-opacity-5 transition-all duration-300;
+  }
+}
+
+/* Scrollbar customizations */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Leaflet map styles */
+.leaflet-container {
+  font-family: inherit;
+  background: #0d1222 !important;
+}
+
+/* Pulse animation */
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 24px rgba(6, 182, 212, 0.7);
+  }
+}
+
+.pulse-glow-button {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
