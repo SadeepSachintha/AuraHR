@@ -26,10 +26,10 @@ The suite also includes **Progressive Web App (PWA)** capabilities for offline c
 
 ## 🛠️ Technology Stack
 
-* **Web Portal (Frontend)**: Native HTML5, Vanilla CSS3 (Custom Glassmorphism, animations, dark theme), FontAwesome.
-* **Service Worker / PWA**: Native Javascript caching APIs (`sw.js`).
-* **Mobile Simulator**: Flutter (Dart) utilizing Material 3 design and the `Outfit` custom typography.
-* **Visual & Geolocation Libraries**: Chart.js (Interactive web analytics), Leaflet.js (Web GPS map tracker), Geolocator (Flutter native GPS locator), static mapping APIs.
+* **Web Portal (Frontend)**: React 18 (TypeScript), Vite, Tailwind CSS (Premium Dark Glassmorphism theme, dynamic hover states), and Lucide React icons.
+* **Service Worker / PWA**: Web App Manifest (`manifest.json`) and native JavaScript caching APIs (`sw.js`).
+* **Mobile Simulator**: Flutter (Dart) utilizing Material 3 design and custom typography.
+* **Visual & Geolocation Libraries**: Responsive interactive SVG dashboard charts, Leaflet.js (Web GPS map tracker), Geolocator (Flutter native GPS locator), static mapping APIs.
 * **Cloud Backend**: Netlify Serverless Functions (Node.js API).
 * **Local Backend**: PHP Proxy (XAMPP compatible).
 * **Database**: Supabase PostgreSQL Cloud.
@@ -163,12 +163,22 @@ CREATE INDEX IF NOT EXISTS idx_kpis_company ON public.kpis(company_id);
    SUPABASE_URL=https://your-project-ref.supabase.co
    SUPABASE_SERVICE_KEY=your-supabase-access-key
    ```
-3. Open the XAMPP Control Panel and start **Apache**.
-4. Open your browser and navigate to:
+3. Open the XAMPP Control Panel and start **Apache** (serving local API endpoints at `/api/index.php`).
+4. Install packages and run the React frontend in dev mode:
+   ```bash
+   npm install
+   npm run dev
    ```
-   http://localhost/HR App/
+   Open your browser and navigate to:
    ```
-   The application will connect to Supabase through the local PHP proxy API, indicated by **"Live SaaS Cloud DB Active"** in the header.
+   http://localhost:5173/
+   ```
+   Vite's dev proxy automatically redirects `/api/*` requests to your local Apache proxy server.
+5. To test the production-ready build locally:
+   ```bash
+   npm run build
+   ```
+   Open your browser and navigate to `http://localhost/HR App/dist/`.
 
 ---
 
@@ -178,7 +188,9 @@ CREATE INDEX IF NOT EXISTS idx_kpis_company ON public.kpis(company_id);
 3. In your Netlify Site dashboard, go to **Site Settings > Environment Variables** (or **Site configuration > Environment variables**) and add:
    * **`SUPABASE_URL`**: Your Supabase API URL.
    * **`SUPABASE_SERVICE_KEY`**: Your Supabase private access key (or `service_role` key).
-4. Netlify will build and deploy the application. Your live site is now securely connected to the cloud backend database!
+4. Netlify will automatically build the application using the configuration in [netlify.toml](file:///d:/xampp/htdocs/HR%20App/netlify.toml):
+   * Build command: `npm run build`
+   * Publish directory: `dist`
 
 ---
 
