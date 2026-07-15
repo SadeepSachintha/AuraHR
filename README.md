@@ -59,6 +59,10 @@ Located in the [/mobile](file:///d:/xampp/htdocs/HR App/mobile) subdirectory, th
    - **Leave Portal**: Real-time indicators of Annual, Casual, and Medical leave balances. Includes forms to select leave dates and submit application requests to the cloud DB.
    - **Expense Claims**: Multi-category claim submissions (Travel, Meals, Internet, Medical). Simulates uploading image receipts via Unsplash presets.
    - **Payslips**: Comprehensive overview of earnings (basic + allowance), deductions (taxes, EPF, ETF), and employer contributions, with detailed calculations.
+5. **Active Shift & Roster Card**: Displays daily work timetables synchronizing real-time roster updates. Warns users with punctuality delay offsets if checking in past scheduled times.
+6. **Coworker Directory & Status Board**: Registry list showing active coworker profiles, live connection indicators (online/offline status rings), and one-tap clipboard copy helpers for emails and phone numbers.
+7. **Administrative Notification Inbox**: A badged header notification hub compiling processed claim and leave actions. Displays approvals/rejections with manager operator tags.
+8. **Manual Offline Sync Banner**: Displays high-visibility amber warning alerts if clock-in logs are cached offline, prompting manual one-click sync execution commands.
 
 ---
 
