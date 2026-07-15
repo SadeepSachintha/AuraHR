@@ -1,32 +1,47 @@
-# React + TypeScript + Vite
+# AuraHR - Standalone Production Web Admin Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This subdirectory houses the standalone production admin dashboard, optimized for full-screen desktop viewing, decoupled from mobile simulators, and secured by Supabase Authentication.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## ⚡ Key Technical Features
 
-## React Compiler
+1. **Supabase Authentication Gateway:**
+   - Real-time login via `LoginPage.tsx` using your production Supabase project.
+   - Developer/Sandbox fallback credentials: `admin@aurahr.io` / `admin123`.
+   
+2. **Interactive Live Map:**
+   - Leaflet.js dark-themed map plotting present employees' geolocations.
+   - Distinct green (geofenced office area) and red (remote site check-in) markers.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+3. **Multi-Tenant Support:**
+   - Send requests tagged with dynamic company-scoped headers (`X-Company-ID`).
 
-## Expanding the Oxlint configuration
+---
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## 🚀 Setup & Build Pipelines
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+### 1. Configure Environment Keys
+Create a `.env` file or define Netlify environment variables:
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-supabase-anon-key
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+### 2. Local Run
+```bash
+npm install
+npm run dev
+```
+
+### 3. Compile Production Bundle
+```bash
+npm run build
+```
+Static assets will compile into the `dist/` directory.
+
+### 4. Setup Routing Proxy Redirects
+If deployed on Netlify, create a file named `_redirects` inside the `public/` directory to safely route API logs:
+```text
+/api/*  https://your-production-php-backend.com/api/:splat  200
+```

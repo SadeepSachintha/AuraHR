@@ -13,14 +13,17 @@ The suite also includes **Progressive Web App (PWA)** capabilities for offline c
   * **Production (Netlify)**: Routes `/api/*` requests to serverless Node.js handlers (`netlify/functions/api.js`).
   * **Local Development (XAMPP)**: Automatically routes requests to a local PHP proxy (`api/index.php`) via `.htaccess` URL rewrites, eliminating the need to install Node.js/npm or Netlify CLI locally.
 * **100% Secret Database Keys**: Supabase URL and keys are stored securely in a local `.env` file (ignored by Git) or within Netlify Site environment variables. They are never exposed to the client browser.
-* **Multi-Tenant Isolation**: Multiple companies share the same database. By changing the **Tenant Selector** in the header, the frontend includes a custom `X-Company-ID` request header, and the backend automatically filters queries (e.g., `WHERE company_id = companyId`).
-* **Graceful Sandbox Fallback**: If both Netlify and the local PHP proxy are offline, the frontend `DB_ENGINE` falls back to **Local Sandbox Mode** using browser `localStorage` for offline presentations.
+* **Multi-Tenant Isolation**: Multiple companies share the same database. By changing the **Tenant Selector** in the header, the frontend includes a custom `X-Company-ID` request header, and the backend automatically filters queries.
+* **Standalone Production Portal (`/production-portal`)**: 
+  * A separate Vite + React + TS portal decoupled from the Web Simulator frame.
+  * Secured by a **Supabase Auth Sign-In Gateway** (supporting sandbox fallback `admin@aurahr.io` / `admin123`).
+  * Integrates a **Leaflet.js Live Attendance map** dynamically plotting Geofenced vs Remote employee check-in pins.
 * **Progressive Web App (PWA)**:
-  * Includes a [Web App Manifest](file:///d:/xampp/htdocs/HR%20App/manifest.json) supporting standard and maskable icons (`192x192` and `512x512` pixels), standalone viewport, and dark themes.
-  * Uses a dedicated [Service Worker](file:///d:/xampp/htdocs/HR%20App/sw.js) implements an **Offline Cache-First Strategy** for static assets (HTML, CSS, JS, manifest, and icons), while bypassing API routes to ensure live server communication takes precedence.
-* **Mobile Simulator Integration**:
-  * Connected via HTTP REST APIs to the PHP proxy or Netlify endpoint.
-  * Implements automatic platform-based routing (`10.0.2.2` for Android Emulator loopbacks and localhost/127.0.0.1 for Web and physical devices).
+  * Includes a [Web App Manifest](file:///d:/xampp/htdocs/HR App/manifest.json) supporting standard and maskable icons (`192x192` and `512x512` pixels), standalone viewport, and dark themes.
+  * Uses a dedicated [Service Worker](file:///d:/xampp/htdocs/HR App/sw.js) implementing an **Offline Cache-First Strategy** for static assets.
+* **Mobile Client Offline Sync**:
+  * Employs `FlutterSecureStorage` to cache geofenced clock-in logs when the employee has no internet access.
+  * Automatically synchronizes local items to the cloud database when connection returns and the screen refreshes.
 
 ---
 
@@ -28,8 +31,8 @@ The suite also includes **Progressive Web App (PWA)** capabilities for offline c
 
 * **Web Portal (Frontend)**: React 18 (TypeScript), Vite, Tailwind CSS (Premium Dark Glassmorphism theme, dynamic hover states), and Lucide React icons.
 * **Service Worker / PWA**: Web App Manifest (`manifest.json`) and native JavaScript caching APIs (`sw.js`).
-* **Mobile Simulator**: Flutter (Dart) utilizing Material 3 design and custom typography.
-* **Visual & Geolocation Libraries**: Responsive interactive SVG dashboard charts, Leaflet.js (Web GPS map tracker), Geolocator (Flutter native GPS locator), static mapping APIs.
+* **Mobile Client**: Flutter (Dart) utilizing Material 3 design and custom typography.
+* **Visual & Geolocation Libraries**: Leaflet.js (Web GPS map tracker), Geolocator (Flutter native GPS locator), static mapping APIs.
 * **Cloud Backend**: Netlify Serverless Functions (Node.js API).
 * **Local Backend**: PHP Proxy (XAMPP compatible).
 * **Database**: Supabase PostgreSQL Cloud.
@@ -38,13 +41,14 @@ The suite also includes **Progressive Web App (PWA)** capabilities for offline c
 
 ## 📱 Mobile App Screens & Features
 
-Located in the [/mobile](file:///d:/xampp/htdocs/HR%20App/mobile) subdirectory, the Flutter mobile simulator contains the following features:
+Located in the [/mobile](file:///d:/xampp/htdocs/HR App/mobile) subdirectory, the Flutter mobile simulator contains the following features:
 
 1. **Biometric Bypass Splash Screen**: Simulated fingerprint biometric gateway to unlock employee workspace instantly without manual login friction.
 2. **Interactive Employee Dashboard**: Displays active shift status (clocked in/out), recent activities, and quick actions to access services.
 3. **GPS Geofenced Clock-in/out Screen**:
    - Acquires lock on native GPS coordinates using the `geolocator` plugin.
-   - Automatically handles mock location simulation for environments where hardware GPS is unavailable (e.g., Windows builds).
+   - Automatically handles mock location simulation for environments where hardware GPS is unavailable (e.g. Windows builds).
+   - Saves offline check-ins locally when network is unavailable, and auto-syncs when online.
    - Dynamically renders location markers on an interactive static map using GPS latitude/longitude.
 4. **Self-Service Modules**:
    - **Leave Portal**: Real-time indicators of Annual, Casual, and Medical leave balances. Includes forms to select leave dates and submit application requests to the cloud DB.
