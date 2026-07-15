@@ -8,6 +8,7 @@ import { AccessConsole } from './components/AccessConsole';
 import { AuditTrail } from './components/AuditTrail';
 import { ExportCenter } from './components/ExportCenter';
 import { ShiftPlanner } from './components/ShiftPlanner';
+import { OrgChart } from './components/OrgChart';
 import { LoginPage } from './components/LoginPage';
 import { supabase } from './services/supabase';
 import { API_SERVICE } from './services/api';
@@ -352,6 +353,8 @@ const App: React.FC = () => {
         return <ExportCenter employees={employees} attendance={attendance} leaves={leaves} />;
       case 'shift-planner':
         return <ShiftPlanner employees={employees} attendance={attendance} rosters={rosters} onAddRoster={handleAssignRoster} />;
+      case 'org-chart':
+        return <OrgChart employees={employees} />;
       default:
         return <div>View not found.</div>;
     }
