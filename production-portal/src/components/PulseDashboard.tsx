@@ -30,6 +30,7 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
   const mapRef = useRef<any>(null);
+  const [showOverdueModal, setShowOverdueModal] = React.useState(false);
   
   // 1. Stats Calculations
   const totalEmployees = employees.length;
@@ -39,10 +40,11 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
   const pendingLeaves = leaves.filter(l => l.status === 'Pending');
   
   // Overdue tasks
-  const overdueTasks = tasks.filter(t => {
+  const overdueTasksList = tasks.filter(t => {
     if (t.status === 'completed') return false;
     return new Date(t.due_date) < new Date(todayStr);
-  }).length;
+  });
+  const overdueTasks = overdueTasksList.length;
 
   const onLeaveToday = leaves.filter(l => {
     if (l.status !== 'Approved') return false;
@@ -187,7 +189,11 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
         </div>
 
         {/* Stat Card: Overdue Tasks */}
-        <div className="glass-inner-card rounded-2xl p-5 flex items-center justify-between border border-white/5 shadow-md">
+        <div 
+          onClick={() => setShowOverdueModal(true)}
+          className="glass-inner-card rounded-2xl p-5 flex items-center justify-between border border-white/5 shadow-md cursor-pointer hover:bg-white/10 hover:border-red-500/20 active:scale-98 transition-all"
+          title="Click to view overdue tasks"
+        >
           <div className="space-y-1">
             <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Overdue Tasks</span>
             <div className="flex items-baseline gap-2">
@@ -420,6 +426,60 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {showOverdueModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-lg rounded-3xl p-6 border border-white/10 shadow-2xl relative overflow-hidden max-h-[85vh] flex flex-col">
+            <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-red-500 to-transparent" />
+            
+            <div className="flex items-center justify-between pb-4 border-b border-white/5 mb-4">
+              <div className="flex items-center gap-2 text-red-400">
+                <AlertTriangle size={20} />
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider">Overdue Tasks Checklist</h3>
+              </div>
+              <button 
+                onClick={() => setShowOverdueModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto space-y-3.5 flex-1 pr-1">
+              {overdueTasksList.length === 0 ? (
+                <p className="text-gray-400 text-xs text-center py-6">No overdue tasks logged in database.</p>
+              ) : (
+                overdueTasksList.map(task => {
+                  const assignee = employees.find(e => e.id === task.emp_id);
+                  return (
+                    <div key={task.id} className="bg-white/5 border border-white/5 p-4 rounded-xl space-y-2 hover:border-red-500/20 transition-all">
+                      <div className="flex items-start justify-between gap-4">
+                        <h4 className="font-semibold text-xs text-white leading-snug">{task.title}</h4>
+                        <span className="text-[10px] bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/20 whitespace-nowrap">
+                          Due {task.due_date}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-gray-400">
+                        <span>Assignee: <strong className="text-gray-200">{assignee ? assignee.name : task.emp_id}</strong></span>
+                        <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-gray-500">Project: {task.project_id}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-white/5 mt-4 flex justify-end">
+              <button
+                onClick={() => setShowOverdueModal(false)}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-semibold transition-colors"
+              >
+                Close List
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
