@@ -6,6 +6,7 @@ import '../models/roster.dart';
 import 'attendance_screen.dart';
 import 'self_service_screens.dart';
 import 'tasks_screen.dart';
+import 'directory_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String empId;
@@ -304,6 +305,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => TasksScreen(empId: emp.id),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildWidgetCard(
+                    icon: Icons.people,
+                    title: 'Coworkers',
+                    subtitle: 'Directory & Status',
+                    color: Colors.cyan,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const CoworkerDirectoryScreen(),
                         ),
                       );
                     },
