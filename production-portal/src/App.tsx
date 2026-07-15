@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { PulseDashboard } from './components/PulseDashboard';
 import { EmployeesPage } from './components/EmployeesPage';
 import { OperationsPage } from './components/OperationsPage';
+import { AccessConsole } from './components/AccessConsole';
 import { LoginPage } from './components/LoginPage';
 import { supabase } from './services/supabase';
 import { API_SERVICE } from './services/api';
@@ -18,6 +19,7 @@ interface ToastState {
 
 const App: React.FC = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [adminRole, setAdminRole] = useState<'Super Admin' | 'Department Manager' | 'HR Specialist'>('Super Admin');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [companyId, setCompanyId] = useState<string>('company_aura');
   const [isSaaSActive, setIsSaaSActive] = useState<boolean>(false);
@@ -48,12 +50,29 @@ const App: React.FC = () => {
     const isOnline = await API_SERVICE.init(companyId);
     setIsSaaSActive(isOnline);
 
-    const empList = await API_SERVICE.getEmployees(companyId);
-    const attList = await API_SERVICE.getAttendance(companyId);
-    const leaveList = await API_SERVICE.getLeaves(companyId);
-    const claimList = await API_SERVICE.getClaims(companyId);
-    const projList = await API_SERVICE.getProjects(companyId);
-    const taskList = await API_SERVICE.getTasks(companyId);
+    let empList = await API_SERVICE.getEmployees(companyId);
+    let attList = await API_SERVICE.getAttendance(companyId);
+    let leaveList = await API_SERVICE.getLeaves(companyId);
+    let claimList = await API_SERVICE.getClaims(companyId);
+    let projList = await API_SERVICE.getProjects(companyId);
+    let taskList = await API_SERVICE.getTasks(companyId);
+
+    // Apply RBAC filters for Department Manager (Engineering only, masked salaries)
+    if (adminRole === 'Department Manager') {
+      empList = empList.filter(e => e.dept === 'Engineering').map(e => ({
+        ...e,
+        salary: 0,
+        allowance: 0,
+        epf_no: 'MASKED'
+      }));
+      
+      const engineeringEmpIds = new Set(empList.map(e => e.id));
+      
+      attList = attList.filter(a => engineeringEmpIds.has(a.emp_id));
+      leaveList = leaveList.filter(l => engineeringEmpIds.has(l.emp_id));
+      claimList = claimList.filter(c => engineeringEmpIds.has(c.emp_id));
+      taskList = taskList.filter(t => engineeringEmpIds.has(t.emp_id));
+    }
 
     setEmployees(empList);
     setAttendance(attList);
@@ -64,12 +83,21 @@ const App: React.FC = () => {
   };
 
   const determineTenant = (email: string) => {
-    if (email.includes('@techcorp.')) {
+    if (email.includes('manager@')) {
+      setAdminRole('Department Manager');
       setCompanyId('company_techcorp');
-    } else if (email.includes('@retailhub.')) {
+    } else if (email.includes('specialist@')) {
+      setAdminRole('HR Specialist');
       setCompanyId('company_retailhub');
     } else {
-      setCompanyId('company_aura');
+      setAdminRole('Super Admin');
+      if (email.includes('@techcorp.')) {
+        setCompanyId('company_techcorp');
+      } else if (email.includes('@retailhub.')) {
+        setCompanyId('company_retailhub');
+      } else {
+        setCompanyId('company_aura');
+      }
     }
   };
 
@@ -89,6 +117,7 @@ const App: React.FC = () => {
         determineTenant(email);
       } else {
         setUserEmail(null);
+        setAdminRole('Super Admin');
         setCompanyId('company_aura');
       }
     });
@@ -260,6 +289,8 @@ const App: React.FC = () => {
             </button>
           </div>
         );
+      case 'access-control':
+        return <AccessConsole />;
       default:
         return <div>View not found.</div>;
     }
@@ -283,6 +314,7 @@ const App: React.FC = () => {
         pendingClaimsCount={claims.filter(c => c.status === 'Pending').length}
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
+        adminRole={adminRole}
       />
 
       {/* Main Container */}
@@ -296,6 +328,7 @@ const App: React.FC = () => {
           setSearchQuery={setSearchQuery}
           userEmail={userEmail}
           onSignOut={handleSignOut}
+          adminRole={adminRole}
         />
 
         {/* Workspace content container */}

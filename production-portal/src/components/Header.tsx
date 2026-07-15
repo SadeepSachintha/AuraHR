@@ -13,6 +13,7 @@ interface HeaderProps {
   setSearchQuery: (query: string) => void;
   userEmail: string | null;
   onSignOut: () => void;
+  adminRole: string | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,7 +23,8 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   setSearchQuery,
   userEmail,
-  onSignOut
+  onSignOut,
+  adminRole
 }) => {
   return (
     <header className="glass-panel w-full flex items-center justify-between p-4 px-6 rounded-2xl select-none">
@@ -64,8 +66,9 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Reseed DB Trigger */}
         <button
           onClick={onResetData}
-          className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200"
-          title="Reset database to original production template"
+          disabled={adminRole === 'HR Specialist'}
+          className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 disabled:opacity-35 disabled:hover:bg-red-500/10 cursor-pointer disabled:cursor-not-allowed"
+          title={adminRole === 'HR Specialist' ? "Action restricted for HR Specialists" : "Reset database to original production template"}
         >
           <DatabaseBackup size={14} />
           <span>Reset Data</span>
@@ -82,9 +85,20 @@ export const Header: React.FC<HeaderProps> = ({
             className="h-9 w-9 rounded-xl border border-white/10 object-cover"
           />
           <div className="hidden md:flex flex-col text-left">
-            <h4 className="text-xs font-semibold text-white leading-tight">Samantha Perera</h4>
-            <span className="text-[9px] text-cyan-400/80 font-medium truncate max-w-[120px]" title={userEmail || ''}>
-              {userEmail ? userEmail.split('@')[0] : 'HR Director'}
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-semibold text-white leading-tight">Samantha Perera</h4>
+              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider scale-90 ${
+                adminRole === 'Super Admin' 
+                  ? 'bg-red-500/10 text-red-400 border-red-500/20' 
+                  : adminRole === 'Department Manager' 
+                    ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' 
+                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              }`}>
+                {adminRole || 'HR Director'}
+              </span>
+            </div>
+            <span className="text-[9px] text-cyan-400/80 font-medium truncate max-w-[120px] mt-0.5" title={userEmail || ''}>
+              {userEmail ? userEmail.split('@')[0] : 'admin'}
             </span>
             <button
               onClick={onSignOut}

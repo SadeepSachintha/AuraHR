@@ -7,7 +7,8 @@ import {
   Receipt,
   ChevronLeft,
   ChevronRight,
-  Wind
+  Wind,
+  ShieldAlert
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -17,6 +18,7 @@ interface SidebarProps {
   pendingClaimsCount: number;
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
+  adminRole: string | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -25,7 +27,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   pendingLeavesCount,
   pendingClaimsCount,
   isCollapsed,
-  setIsCollapsed
+  setIsCollapsed,
+  adminRole
 }) => {
   const menuItems = [
     { id: 'dashboard', name: 'Daily Pulse', icon: LayoutDashboard, badge: 0 },
@@ -34,6 +37,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'leaves', name: 'Leaves Board', icon: CalendarDays, badge: pendingLeavesCount },
     { id: 'claims', name: 'Expense Claims', icon: Receipt, badge: pendingClaimsCount }
   ];
+
+  if (adminRole === 'Super Admin') {
+    menuItems.push({
+      id: 'access-control',
+      name: 'Access Control',
+      icon: ShieldAlert,
+      badge: 0
+    });
+  }
 
   return (
     <aside 
