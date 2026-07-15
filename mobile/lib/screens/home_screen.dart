@@ -7,6 +7,7 @@ import 'attendance_screen.dart';
 import 'self_service_screens.dart';
 import 'tasks_screen.dart';
 import 'directory_screen.dart';
+import 'notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String empId;
@@ -23,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _shiftStatus = 'Not Logged';
   bool _isClockedIn = false;
   Roster? _todayRoster;
+  int _notificationCount = 0;
 
   @override
   void initState() {
@@ -51,10 +53,19 @@ class _HomeScreenState extends State<HomeScreen> {
       
       // Fetch today's shift roster from API
       final roster = await _apiService.fetchTodayRoster(widget.empId, todayStr);
+
+      // Fetch notification items count
+      final leaves = await _apiService.fetchLeaves(widget.empId);
+      final claims = await _apiService.fetchClaims(widget.empId);
+      final listNotes = [
+        ...leaves.where((l) => l.status.toLowerCase() != 'pending'),
+        ...claims.where((c) => c.status.toLowerCase() != 'pending'),
+      ];
       
       setState(() {
         _employee = emp;
         _todayRoster = roster;
+        _notificationCount = listNotes.length;
         _isLoading = false;
         if (todayLog.isNotEmpty) {
           if (todayLog.first.clockOut.isEmpty) {
@@ -96,6 +107,46 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('AuraMobile'),
         backgroundColor: const Color(0xFF1E293B),
         actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => NotificationsScreen(empId: emp.id),
+                    ),
+                  );
+                },
+              ),
+              if (_notificationCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$_notificationCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadProfile,
