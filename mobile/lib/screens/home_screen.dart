@@ -25,6 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isClockedIn = false;
   Roster? _todayRoster;
   int _notificationCount = 0;
+  int _offlineQueueCount = 0;
+  bool _isSyncing = false;
 
   @override
   void initState() {
@@ -35,6 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
     final synced = await _apiService.syncOfflineQueue();
+    final queueCount = await _apiService.getOfflineQueueCount();
+    
     if (synced > 0 && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -66,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _employee = emp;
         _todayRoster = roster;
         _notificationCount = listNotes.length;
+        _offlineQueueCount = queueCount;
         _isLoading = false;
         if (todayLog.isNotEmpty) {
           if (todayLog.first.clockOut.isEmpty) {
@@ -81,7 +86,32 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       });
     } else {
-      setState(() => _isLoading = false);
+      setState(() {
+        _offlineQueueCount = queueCount;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _manualSyncOffline() async {
+    setState(() => _isSyncing = true);
+    final synced = await _apiService.syncOfflineQueue();
+    final remaining = await _apiService.getOfflineQueueCount();
+    if (!mounted) return;
+    setState(() {
+      _offlineQueueCount = remaining;
+      _isSyncing = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(synced > 0 
+            ? 'Successfully synchronized $synced logs!' 
+            : (remaining > 0 ? 'Sync failed. Server unreachable.' : 'All logs synced!')),
+        backgroundColor: synced > 0 ? Colors.green : (remaining > 0 ? Colors.orange[800] : Colors.teal),
+      ),
+    );
+    if (synced > 0) {
+      _loadProfile();
     }
   }
 
@@ -199,6 +229,67 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+              if (_offlineQueueCount > 0) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[900]!.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.amber[800]!.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.wifi_off, color: Colors.amber[500], size: 22),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Unsynced Local Logs',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'You have $_offlineQueueCount clock-in logs waiting to sync.',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _isSyncing
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.amberAccent),
+                              ),
+                            )
+                          : TextButton.icon(
+                              onPressed: _manualSyncOffline,
+                              icon: const Icon(Icons.sync, size: 16, color: Colors.amberAccent),
+                              label: const Text(
+                                'Sync Now',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amberAccent,
+                                ),
+                              ),
+                            ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               // Shift Clock widget card
               Container(

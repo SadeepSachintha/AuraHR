@@ -333,4 +333,18 @@ class ApiService {
     }
     return null;
   }
+
+  // Retrieve count of locally queued items
+  Future<int> getOfflineQueueCount() async {
+    try {
+      final dataStr = await _secureStorage.read(key: _offlineQueueKey);
+      if (dataStr != null && dataStr.isNotEmpty) {
+        final List queue = json.decode(dataStr);
+        return queue.length;
+      }
+    } catch (e) {
+      print('Error checking queue count: $e');
+    }
+    return 0;
+  }
 }
