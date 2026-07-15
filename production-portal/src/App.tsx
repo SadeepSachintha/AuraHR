@@ -6,6 +6,7 @@ import { EmployeesPage } from './components/EmployeesPage';
 import { OperationsPage } from './components/OperationsPage';
 import { AccessConsole } from './components/AccessConsole';
 import { AuditTrail } from './components/AuditTrail';
+import { ExportCenter } from './components/ExportCenter';
 import { LoginPage } from './components/LoginPage';
 import { supabase } from './services/supabase';
 import { API_SERVICE } from './services/api';
@@ -331,6 +332,8 @@ const App: React.FC = () => {
         return <AccessConsole />;
       case 'audit-trail':
         return <AuditTrail logs={auditLogs} />;
+      case 'export-center':
+        return <ExportCenter employees={employees} attendance={attendance} leaves={leaves} />;
       default:
         return <div>View not found.</div>;
     }

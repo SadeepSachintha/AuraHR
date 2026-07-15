@@ -9,7 +9,8 @@ import {
   ChevronRight,
   Wind,
   ShieldAlert,
-  History
+  History,
+  FolderDown
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -38,6 +39,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'leaves', name: 'Leaves Board', icon: CalendarDays, badge: pendingLeavesCount },
     { id: 'claims', name: 'Expense Claims', icon: Receipt, badge: pendingClaimsCount }
   ];
+
+  if (adminRole === 'Super Admin' || adminRole === 'HR Specialist') {
+    menuItems.push({
+      id: 'export-center',
+      name: 'Export Center',
+      icon: FolderDown,
+      badge: 0
+    });
+  }
 
   if (adminRole === 'Super Admin') {
     menuItems.push({
