@@ -12,6 +12,8 @@ interface HeaderProps {
   onResetData: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  userEmail: string | null;
+  onSignOut: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,7 +22,9 @@ export const Header: React.FC<HeaderProps> = ({
   isSaaSActive,
   onResetData,
   searchQuery,
-  setSearchQuery
+  setSearchQuery,
+  userEmail,
+  onSignOut
 }) => {
   return (
     <header className="glass-panel w-full flex items-center justify-between p-4 px-6 rounded-2xl select-none">
@@ -84,9 +88,17 @@ export const Header: React.FC<HeaderProps> = ({
             alt="Admin Profile"
             className="h-9 w-9 rounded-xl border border-white/10 object-cover"
           />
-          <div className="hidden md:block text-left">
+          <div className="hidden md:flex flex-col text-left">
             <h4 className="text-xs font-semibold text-white leading-tight">Samantha Perera</h4>
-            <span className="text-[10px] text-gray-400 leading-none">HR Director</span>
+            <span className="text-[9px] text-cyan-400/80 font-medium truncate max-w-[120px]" title={userEmail || ''}>
+              {userEmail ? userEmail.split('@')[0] : 'HR Director'}
+            </span>
+            <button
+              onClick={onSignOut}
+              className="text-[9px] text-red-400/70 hover:text-red-400 font-semibold cursor-pointer underline text-left mt-0.5"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </div>

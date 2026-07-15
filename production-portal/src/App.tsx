@@ -4,6 +4,8 @@ import { Header } from './components/Header';
 import { PulseDashboard } from './components/PulseDashboard';
 import { EmployeesPage } from './components/EmployeesPage';
 import { OperationsPage } from './components/OperationsPage';
+import { LoginPage } from './components/LoginPage';
+import { supabase } from './services/supabase';
 import { API_SERVICE } from './services/api';
 import type { Employee, Attendance, Leave, Claim, Project, Task } from './types';
 import { Info, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -15,6 +17,7 @@ interface ToastState {
 }
 
 const App: React.FC = () => {
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [companyId, setCompanyId] = useState<string>('company_aura');
   const [isSaaSActive, setIsSaaSActive] = useState<boolean>(false);
@@ -61,10 +64,35 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
-  }, [companyId]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUserEmail(session.user.email || 'admin@aurahr.io');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserEmail(session.user.email || 'admin@aurahr.io');
+      } else {
+        setUserEmail(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (userEmail) {
+      loadData();
+    }
+  }, [companyId, userEmail]);
 
   // 2. Interactive Handlers
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUserEmail(null);
+    triggerToast("Signed out of administrative console.", 'info');
+  };
   const handleApproveLeave = async (leaveId: string) => {
     const leave = leaves.find(l => l.id === leaveId);
     if (!leave) return;
@@ -222,6 +250,10 @@ const App: React.FC = () => {
     }
   };
 
+  if (!userEmail) {
+    return <LoginPage onLoginSuccess={(email) => setUserEmail(email)} />;
+  }
+
   return (
     <div className="min-h-screen p-4 flex gap-4 overflow-hidden relative">
       {/* Decorative Orbs */}
@@ -248,6 +280,8 @@ const App: React.FC = () => {
           onResetData={handleResetData}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          userEmail={userEmail}
+          onSignOut={handleSignOut}
         />
 
         {/* Workspace content container */}
