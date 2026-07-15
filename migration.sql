@@ -42,3 +42,17 @@ CREATE TABLE IF NOT EXISTS public.tasks (
 CREATE INDEX IF NOT EXISTS idx_projects_company ON public.projects(company_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_company ON public.tasks(company_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_emp ON public.tasks(emp_id);
+
+-- 4. Create Audit Logs table for security compliance tracking
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+    id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    operator TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    details TEXT NOT NULL,
+    ip_address TEXT DEFAULT '127.0.0.1',
+    company_id TEXT DEFAULT 'company_aura'
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_company ON public.audit_logs(company_id);
+CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON public.audit_logs(timestamp DESC);

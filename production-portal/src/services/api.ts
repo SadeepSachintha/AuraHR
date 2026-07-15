@@ -1,4 +1,4 @@
-import type { Employee, Attendance, Leave, Claim, KPI, Project, Task } from '../types';
+import type { Employee, Attendance, Leave, Claim, KPI, Project, Task, AuditLog } from '../types';
 import * as mock from './mockData';
 
 // Storage key for localStorage fallback
@@ -12,9 +12,16 @@ interface DatabaseSchema {
   kpis: KPI[];
   projects: Project[];
   tasks: Task[];
+  auditLogs: AuditLog[];
 }
 
 // Initialize Local DB if empty
+const INITIAL_AUDIT_LOGS: AuditLog[] = [
+  { id: 1, timestamp: new Date(Date.now() - 7200000).toISOString(), operator: 'admin@aurahr.io', action_type: 'Security', details: 'Administrator session authenticated successfully.', ip_address: '112.134.4.15' },
+  { id: 2, timestamp: new Date(Date.now() - 3600000).toISOString(), operator: 'admin@aurahr.io', action_type: 'Employee', details: 'Added new employee profile for Kasun Silva (EMP001).', ip_address: '112.134.4.15' },
+  { id: 3, timestamp: new Date(Date.now() - 1800000).toISOString(), operator: 'admin@aurahr.io', action_type: 'Leave', details: 'Approved casual leave request for Dilini Fernando.', ip_address: '112.134.4.15' }
+];
+
 const initLocalStorageDB = (): DatabaseSchema => {
   const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
   if (stored) {
@@ -28,6 +35,7 @@ const initLocalStorageDB = (): DatabaseSchema => {
         kpis: parsed.kpis || mock.INITIAL_KPIS,
         projects: parsed.projects || mock.INITIAL_PROJECTS,
         tasks: parsed.tasks || mock.INITIAL_TASKS,
+        auditLogs: parsed.auditLogs || INITIAL_AUDIT_LOGS,
       };
     } catch (e) {
       console.error("Local storage corrupt. Resetting.", e);
@@ -42,6 +50,7 @@ const initLocalStorageDB = (): DatabaseSchema => {
     kpis: mock.INITIAL_KPIS,
     projects: mock.INITIAL_PROJECTS,
     tasks: mock.INITIAL_TASKS,
+    auditLogs: INITIAL_AUDIT_LOGS,
   };
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initial));
   return initial;
@@ -525,7 +534,46 @@ export const API_SERVICE = {
       kpis: mock.INITIAL_KPIS,
       projects: mock.INITIAL_PROJECTS,
       tasks: mock.INITIAL_TASKS,
+      auditLogs: INITIAL_AUDIT_LOGS,
     };
+    saveLocalDb();
+  },
+
+  getAuditLogs: async function (companyId: string): Promise<AuditLog[]> {
+    if (this.isSaaSActive) {
+      try {
+        const res = await fetch(getApiUrl('audit_logs?order=timestamp.desc'), {
+          headers: { 'X-Company-ID': companyId }
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (e) {
+        console.error("Error fetching audit logs", e);
+      }
+    }
+    return localDb.auditLogs || [];
+  },
+
+  saveAuditLog: async function (log: AuditLog, companyId: string): Promise<void> {
+    if (this.isSaaSActive) {
+      try {
+        await fetch(getApiUrl('audit_logs'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Company-ID': companyId
+          },
+          body: JSON.stringify(log)
+        });
+        return;
+      } catch (e) {
+        console.error("Error saving audit log to API", e);
+      }
+    }
+    if (!localDb.auditLogs) localDb.auditLogs = [];
+    log.id = Date.now();
+    localDb.auditLogs.unshift(log);
     saveLocalDb();
   }
 };

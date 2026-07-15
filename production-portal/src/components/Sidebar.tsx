@@ -8,7 +8,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Wind,
-  ShieldAlert
+  ShieldAlert,
+  History
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -43,6 +44,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'access-control',
       name: 'Access Control',
       icon: ShieldAlert,
+      badge: 0
+    });
+    menuItems.push({
+      id: 'audit-trail',
+      name: 'Audit Trail',
+      icon: History,
       badge: 0
     });
   }

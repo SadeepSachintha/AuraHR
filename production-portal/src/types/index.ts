@@ -88,3 +88,13 @@ export interface KPI {
   company_id?: string;
   created_at?: string;
 }
+
+export interface AuditLog {
+  id?: number;
+  timestamp: string;
+  operator: string;
+  action_type: string;
+  details: string;
+  ip_address: string;
+  company_id?: string;
+}

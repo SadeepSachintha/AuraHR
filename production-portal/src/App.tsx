@@ -5,10 +5,11 @@ import { PulseDashboard } from './components/PulseDashboard';
 import { EmployeesPage } from './components/EmployeesPage';
 import { OperationsPage } from './components/OperationsPage';
 import { AccessConsole } from './components/AccessConsole';
+import { AuditTrail } from './components/AuditTrail';
 import { LoginPage } from './components/LoginPage';
 import { supabase } from './services/supabase';
 import { API_SERVICE } from './services/api';
-import type { Employee, Attendance, Leave, Claim, Project, Task } from './types';
+import type { Employee, Attendance, Leave, Claim, Project, Task, AuditLog } from './types';
 import { Info, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ToastState {
@@ -33,6 +34,7 @@ const App: React.FC = () => {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   // Toast Notification State
   const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'info' });
@@ -56,6 +58,7 @@ const App: React.FC = () => {
     let claimList = await API_SERVICE.getClaims(companyId);
     let projList = await API_SERVICE.getProjects(companyId);
     let taskList = await API_SERVICE.getTasks(companyId);
+    let logsList = await API_SERVICE.getAuditLogs(companyId);
 
     // Apply RBAC filters for Department Manager (Engineering only, masked salaries)
     if (adminRole === 'Department Manager') {
@@ -80,6 +83,7 @@ const App: React.FC = () => {
     setClaims(claimList);
     setProjects(projList);
     setTasks(taskList);
+    setAuditLogs(logsList);
   };
 
   const determineTenant = (email: string) => {
@@ -101,12 +105,36 @@ const App: React.FC = () => {
     }
   };
 
+  const logAdminAction = async (actionType: string, details: string) => {
+    const newLog: AuditLog = {
+      timestamp: new Date().toISOString(),
+      operator: userEmail || 'admin@aurahr.io',
+      action_type: actionType,
+      details: details,
+      ip_address: '112.134.4.15'
+    };
+    await API_SERVICE.saveAuditLog(newLog, companyId);
+    const updated = await API_SERVICE.getAuditLogs(companyId);
+    setAuditLogs(updated);
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         const email = session.user.email || 'admin@aurahr.io';
         setUserEmail(email);
         determineTenant(email);
+        
+        // Log sign-in once
+        const startupLog: AuditLog = {
+          timestamp: new Date().toISOString(),
+          operator: email,
+          action_type: 'Security',
+          details: `Session authenticated successfully for admin: ${email}`,
+          ip_address: '112.134.4.15'
+        };
+        const scopeId = email.includes('manager@') ? 'company_techcorp' : email.includes('specialist@') ? 'company_retailhub' : 'company_aura';
+        API_SERVICE.saveAuditLog(startupLog, scopeId);
       }
     });
 
@@ -170,6 +198,7 @@ const App: React.FC = () => {
 
     await API_SERVICE.saveLeave(updatedLeave, companyId);
     await API_SERVICE.saveEmployee(updatedEmp, companyId);
+    await logAdminAction('Leave', `Approved ${leave.type} leave for ${emp.name} (${diffDays} days). Balances updated.`);
     
     triggerToast(`Approved ${leave.type} leave for ${emp.name} (${diffDays} days). Balances updated.`, 'success');
     loadData();
@@ -186,18 +215,24 @@ const App: React.FC = () => {
     };
 
     await API_SERVICE.saveLeave(updatedLeave, companyId);
+    await logAdminAction('Leave', `Rejected leave request for employee ${leave.emp_id}.`);
+    
     triggerToast(`Rejected leave request for employee ${leave.emp_id}.`, 'info');
     loadData();
   };
 
   const handleAddEmployee = async (newEmp: Employee) => {
     await API_SERVICE.saveEmployee(newEmp, companyId);
+    await logAdminAction('Employee', `Created employee profile for ${newEmp.name} (ID: ${newEmp.id})`);
+    
     triggerToast(`Added employee profile for ${newEmp.name} successfully.`, 'success');
     loadData();
   };
 
   const handleAddTask = async (newTask: Task) => {
     await API_SERVICE.saveTask(newTask, companyId);
+    await logAdminAction('System', `Assigned task "${newTask.title}" to employee ${newTask.emp_id}`);
+    
     triggerToast(`Task "${newTask.title}" assigned successfully.`, 'success');
     loadData();
   };
@@ -228,6 +263,7 @@ const App: React.FC = () => {
       await API_SERVICE.saveProject(updatedProj, companyId);
     }
 
+    await logAdminAction('System', `Moved task status for "${task.title}" to: ${newStatus}`);
     triggerToast(`Task moved to ${newStatus}.`, 'success');
     loadData();
   };
@@ -237,6 +273,8 @@ const App: React.FC = () => {
     if (!confirmation) return;
 
     await API_SERVICE.resetData(companyId);
+    await logAdminAction('System', 'Re-seeded database template back to original clean config states.');
+    
     triggerToast("Databases re-seeded successfully!", 'success');
     loadData();
   };
@@ -291,6 +329,8 @@ const App: React.FC = () => {
         );
       case 'access-control':
         return <AccessConsole />;
+      case 'audit-trail':
+        return <AuditTrail logs={auditLogs} />;
       default:
         return <div>View not found.</div>;
     }
