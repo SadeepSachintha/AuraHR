@@ -98,3 +98,12 @@ export interface AuditLog {
   ip_address: string;
   company_id?: string;
 }
+
+export interface Roster {
+  id: string;
+  emp_id: string;
+  date: string;
+  shift_start: string;
+  shift_end: string;
+  company_id?: string;
+}

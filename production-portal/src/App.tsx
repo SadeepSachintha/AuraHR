@@ -7,10 +7,11 @@ import { OperationsPage } from './components/OperationsPage';
 import { AccessConsole } from './components/AccessConsole';
 import { AuditTrail } from './components/AuditTrail';
 import { ExportCenter } from './components/ExportCenter';
+import { ShiftPlanner } from './components/ShiftPlanner';
 import { LoginPage } from './components/LoginPage';
 import { supabase } from './services/supabase';
 import { API_SERVICE } from './services/api';
-import type { Employee, Attendance, Leave, Claim, Project, Task, AuditLog } from './types';
+import type { Employee, Attendance, Leave, Claim, Project, Task, AuditLog, Roster } from './types';
 import { Info, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ToastState {
@@ -36,6 +37,7 @@ const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [rosters, setRosters] = useState<Roster[]>([]);
 
   // Toast Notification State
   const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'info' });
@@ -60,6 +62,7 @@ const App: React.FC = () => {
     let projList = await API_SERVICE.getProjects(companyId);
     let taskList = await API_SERVICE.getTasks(companyId);
     let logsList = await API_SERVICE.getAuditLogs(companyId);
+    let rosterList = await API_SERVICE.getRosters(companyId);
 
     // Apply RBAC filters for Department Manager (Engineering only, masked salaries)
     if (adminRole === 'Department Manager') {
@@ -76,6 +79,7 @@ const App: React.FC = () => {
       leaveList = leaveList.filter(l => engineeringEmpIds.has(l.emp_id));
       claimList = claimList.filter(c => engineeringEmpIds.has(c.emp_id));
       taskList = taskList.filter(t => engineeringEmpIds.has(t.emp_id));
+      rosterList = rosterList.filter(r => engineeringEmpIds.has(r.emp_id));
     }
 
     setEmployees(empList);
@@ -85,6 +89,7 @@ const App: React.FC = () => {
     setProjects(projList);
     setTasks(taskList);
     setAuditLogs(logsList);
+    setRosters(rosterList);
   };
 
   const determineTenant = (email: string) => {
@@ -280,6 +285,17 @@ const App: React.FC = () => {
     loadData();
   };
 
+  const handleAssignRoster = async (newRoster: Roster) => {
+    await API_SERVICE.saveRoster(newRoster, companyId);
+    
+    const emp = employees.find(e => e.id === newRoster.emp_id);
+    const empName = emp ? emp.name : newRoster.emp_id;
+    await logAdminAction('System', `Assigned duty shift roster for ${empName} on date ${newRoster.date} (${newRoster.shift_start}-${newRoster.shift_end}).`);
+
+    triggerToast(`Assigned shift roster for ${empName} successfully.`, 'success');
+    loadData();
+  };
+
   // 3. Render content view based on tab
   const renderView = () => {
     switch (activeTab) {
@@ -334,6 +350,8 @@ const App: React.FC = () => {
         return <AuditTrail logs={auditLogs} />;
       case 'export-center':
         return <ExportCenter employees={employees} attendance={attendance} leaves={leaves} />;
+      case 'shift-planner':
+        return <ShiftPlanner employees={employees} attendance={attendance} rosters={rosters} onAddRoster={handleAssignRoster} />;
       default:
         return <div>View not found.</div>;
     }

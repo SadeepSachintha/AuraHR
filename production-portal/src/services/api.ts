@@ -1,4 +1,4 @@
-import type { Employee, Attendance, Leave, Claim, KPI, Project, Task, AuditLog } from '../types';
+import type { Employee, Attendance, Leave, Claim, KPI, Project, Task, AuditLog, Roster } from '../types';
 import * as mock from './mockData';
 
 // Storage key for localStorage fallback
@@ -13,6 +13,7 @@ interface DatabaseSchema {
   projects: Project[];
   tasks: Task[];
   auditLogs: AuditLog[];
+  rosters: Roster[];
 }
 
 // Initialize Local DB if empty
@@ -20,6 +21,12 @@ const INITIAL_AUDIT_LOGS: AuditLog[] = [
   { id: 1, timestamp: new Date(Date.now() - 7200000).toISOString(), operator: 'admin@aurahr.io', action_type: 'Security', details: 'Administrator session authenticated successfully.', ip_address: '112.134.4.15' },
   { id: 2, timestamp: new Date(Date.now() - 3600000).toISOString(), operator: 'admin@aurahr.io', action_type: 'Employee', details: 'Added new employee profile for Kasun Silva (EMP001).', ip_address: '112.134.4.15' },
   { id: 3, timestamp: new Date(Date.now() - 1800000).toISOString(), operator: 'admin@aurahr.io', action_type: 'Leave', details: 'Approved casual leave request for Dilini Fernando.', ip_address: '112.134.4.15' }
+];
+
+const INITIAL_ROSTERS: Roster[] = [
+  { id: 'r1', emp_id: 'EMP001', date: new Date().toISOString().split('T')[0], shift_start: '08:30', shift_end: '17:30' },
+  { id: 'r2', emp_id: 'EMP002', date: new Date().toISOString().split('T')[0], shift_start: '08:30', shift_end: '17:30' },
+  { id: 'r3', emp_id: 'EMP003', date: new Date().toISOString().split('T')[0], shift_start: '09:00', shift_end: '18:00' }
 ];
 
 const initLocalStorageDB = (): DatabaseSchema => {
@@ -36,6 +43,7 @@ const initLocalStorageDB = (): DatabaseSchema => {
         projects: parsed.projects || mock.INITIAL_PROJECTS,
         tasks: parsed.tasks || mock.INITIAL_TASKS,
         auditLogs: parsed.auditLogs || INITIAL_AUDIT_LOGS,
+        rosters: parsed.rosters || INITIAL_ROSTERS,
       };
     } catch (e) {
       console.error("Local storage corrupt. Resetting.", e);
@@ -51,6 +59,7 @@ const initLocalStorageDB = (): DatabaseSchema => {
     projects: mock.INITIAL_PROJECTS,
     tasks: mock.INITIAL_TASKS,
     auditLogs: INITIAL_AUDIT_LOGS,
+    rosters: INITIAL_ROSTERS,
   };
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initial));
   return initial;
@@ -535,6 +544,7 @@ export const API_SERVICE = {
       projects: mock.INITIAL_PROJECTS,
       tasks: mock.INITIAL_TASKS,
       auditLogs: INITIAL_AUDIT_LOGS,
+      rosters: INITIAL_ROSTERS,
     };
     saveLocalDb();
   },
@@ -574,6 +584,48 @@ export const API_SERVICE = {
     if (!localDb.auditLogs) localDb.auditLogs = [];
     log.id = Date.now();
     localDb.auditLogs.unshift(log);
+    saveLocalDb();
+  },
+
+  getRosters: async function (companyId: string): Promise<Roster[]> {
+    if (this.isSaaSActive) {
+      try {
+        const res = await fetch(getApiUrl('rosters'), {
+          headers: { 'X-Company-ID': companyId }
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (e) {
+        console.error("Error fetching rosters", e);
+      }
+    }
+    return localDb.rosters || [];
+  },
+
+  saveRoster: async function (roster: Roster, companyId: string): Promise<void> {
+    if (this.isSaaSActive) {
+      try {
+        await fetch(getApiUrl('rosters'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Company-ID': companyId
+          },
+          body: JSON.stringify(roster)
+        });
+        return;
+      } catch (e) {
+        console.error("Error saving roster to API", e);
+      }
+    }
+    if (!localDb.rosters) localDb.rosters = [];
+    const idx = localDb.rosters.findIndex(r => r.id === roster.id);
+    if (idx !== -1) {
+      localDb.rosters[idx] = roster;
+    } else {
+      localDb.rosters.push(roster);
+    }
     saveLocalDb();
   }
 };

@@ -56,3 +56,16 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 
 CREATE INDEX IF NOT EXISTS idx_audit_company ON public.audit_logs(company_id);
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON public.audit_logs(timestamp DESC);
+
+-- 5. Create Shift Rosters table for scheduling compliance
+CREATE TABLE IF NOT EXISTS public.rosters (
+    id TEXT PRIMARY KEY,
+    emp_id TEXT REFERENCES public.employees(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    shift_start TEXT NOT NULL DEFAULT '08:30',
+    shift_end TEXT NOT NULL DEFAULT '17:30',
+    company_id TEXT DEFAULT 'company_aura'
+);
+
+CREATE INDEX IF NOT EXISTS idx_rosters_company ON public.rosters(company_id);
+CREATE INDEX IF NOT EXISTS idx_rosters_date ON public.rosters(date);

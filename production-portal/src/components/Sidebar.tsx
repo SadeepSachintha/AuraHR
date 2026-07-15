@@ -10,7 +10,8 @@ import {
   Wind,
   ShieldAlert,
   History,
-  FolderDown
+  FolderDown,
+  CalendarRange
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,6 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', name: 'Daily Pulse', icon: LayoutDashboard, badge: 0 },
     { id: 'employees', name: 'HR Employees', icon: Users, badge: 0 },
     { id: 'operations', name: 'Operations', icon: KanbanSquare, badge: 0 },
+    { id: 'shift-planner', name: 'Shift Planner', icon: CalendarRange, badge: 0 },
     { id: 'leaves', name: 'Leaves Board', icon: CalendarDays, badge: pendingLeavesCount },
     { id: 'claims', name: 'Expense Claims', icon: Receipt, badge: pendingClaimsCount }
   ];
