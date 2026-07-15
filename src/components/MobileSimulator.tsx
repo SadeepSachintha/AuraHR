@@ -8,7 +8,8 @@ import {
   LogOut,
   Coins,
   ChevronLeft,
-  Compass
+  Compass,
+  Download
 } from 'lucide-react';
 import { Employee, Attendance, Leave, Claim, KPI } from '../types';
 
@@ -60,6 +61,80 @@ export const MobileSimulator: React.FC<MobileSimulatorProps> = ({
 
   const activeEmp = employees.find(e => e.id === activeEmpId) || employees[0];
   const todayStr = new Date().toISOString().split('T')[0];
+
+  const downloadPdfPayslip = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Payslip - ${activeEmp?.name} - ${activeEmpId}</title>
+          <style>
+            body { font-family: 'Inter', system-ui, sans-serif; padding: 40px; color: #1e293b; background: #f8fafc; }
+            .card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 24px; }
+            .company { font-size: 22px; font-weight: 800; color: #0f172a; }
+            .title { font-size: 14px; font-weight: 600; color: #6366f1; background: #e0e7ff; padding: 4px 12px; border-radius: 9999px; }
+            .details { display: grid; grid-template-cols: 1fr 1fr; gap: 16px; margin-bottom: 24px; font-size: 13px; }
+            .details-col div { margin-bottom: 6px; }
+            .label { color: #64748b; font-weight: 500; }
+            .value { color: #0f172a; font-weight: 600; }
+            .divider { border-top: 1px solid #e2e8f0; margin: 20px 0; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+            .deduction { color: #ef4444; }
+            .total { font-size: 16px; font-weight: 700; border-top: 2px solid #e2e8f0; border-bottom: 2px solid #e2e8f0; padding: 12px 0; margin-top: 20px; color: #10b981; }
+            .compliance { background: #f1f5f9; padding: 16px; border-radius: 12px; margin-top: 24px; font-size: 12px; border: 1px dashed #cbd5e1; }
+            .compliance-title { font-weight: 700; color: #475569; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }
+            .footer { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 40px; }
+            @media print {
+              body { background: white; padding: 0; }
+              .card { border: none; box-shadow: none; padding: 0; max-width: 100%; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="header">
+              <div class="company">AuraHR Private Ltd</div>
+              <div class="title">June 2026 Advice</div>
+            </div>
+            <div class="details">
+              <div class="details-col">
+                <div><span class="label">Employee Code:</span> <span class="value">${activeEmp?.id}</span></div>
+                <div><span class="label">Full Name:</span> <span class="value">${activeEmp?.name}</span></div>
+              </div>
+              <div class="details-col" style="text-align: right;">
+                <div><span class="label">Designation:</span> <span class="value">${activeEmp?.role}</span></div>
+                <div><span class="label">Department:</span> <span class="value">${activeEmp?.dept}</span></div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="row"><span class="label">Basic Salary:</span> <span class="value">LKR ${basicSalary.toLocaleString()}</span></div>
+            <div class="row"><span class="label">Allowances:</span> <span class="value">LKR ${allowances.toLocaleString()}</span></div>
+            <div class="row deduction"><span class="label deduction">Employee EPF (8%):</span> <span class="value deduction">- LKR ${epfEmployee.toLocaleString()}</span></div>
+            ${otherDeductions > 0 ? `<div class="row deduction"><span class="label deduction">Other Deductions:</span> <span class="value deduction">- LKR ${otherDeductions.toLocaleString()}</span></div>` : ''}
+            <div class="total">
+              <div class="row"><span>Net Salary Paid:</span> <span>LKR ${netSalary.toLocaleString()}</span></div>
+            </div>
+            <div class="compliance">
+              <div class="compliance-title">Employer Compliance Contributions (Not deducted from salary)</div>
+              <div class="row"><span class="label">Employer EPF (12%):</span> <span class="value">LKR ${epfEmployer.toLocaleString()}</span></div>
+              <div class="row"><span class="label">Employer ETF (3%):</span> <span class="value">LKR ${etfEmployer.toLocaleString()}</span></div>
+            </div>
+            <div class="footer">This is a computer-generated payslip advice and requires no signature.</div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   // 1. Clock Updates
   useEffect(() => {
@@ -722,6 +797,15 @@ export const MobileSimulator: React.FC<MobileSimulatorProps> = ({
                     <span className="text-white font-semibold">LKR {etfEmployer.toLocaleString()}</span>
                   </div>
                 </div>
+
+                {/* Print/Download CTA */}
+                <button
+                  onClick={downloadPdfPayslip}
+                  className="w-full py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-blue-500 to-cyan-400 text-bgSpace hover:opacity-90 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  <Download size={12} />
+                  <span>Download PDF Payslip</span>
+                </button>
               </div>
             </div>
           )}

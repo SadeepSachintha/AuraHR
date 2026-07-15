@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../services/api_service.dart';
 import '../models/leave.dart';
 import '../models/claim.dart';
@@ -1007,6 +1010,193 @@ class PayslipDetailsModal extends StatelessWidget {
   final Payslip payslip;
   const PayslipDetailsModal({super.key, required this.payslip});
 
+  Future<void> _downloadPayslipPdf(BuildContext context) async {
+    final doc = pw.Document();
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context pwContext) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(30),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Header(
+                  level: 0,
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('AuraHR Private Ltd', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                      pw.Text('PAYSLIP', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.indigo)),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text('Payslip Advice - ${payslip.month}', style: pw.TextStyle(fontSize: 14, fontStyle: pw.FontStyle.italic)),
+                pw.Divider(thickness: 2),
+                pw.SizedBox(height: 10),
+                
+                // Employee Details Table
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('Employee Code: ${payslip.empId}', style: const pw.TextStyle(fontSize: 12)),
+                        pw.Text('Month: ${payslip.month}', style: const pw.TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('Generated On: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}', style: const pw.TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 30),
+                
+                // Earnings and Deductions Table
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey300),
+                  children: [
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Description', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Amount (LKR)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                        ),
+                      ],
+                    ),
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Basic Salary'),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(payslip.basic.toStringAsFixed(2), textAlign: pw.TextAlign.right),
+                        ),
+                      ],
+                    ),
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Allowances'),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(payslip.allowances.toStringAsFixed(2), textAlign: pw.TextAlign.right),
+                        ),
+                      ],
+                    ),
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Deductions', style: const pw.TextStyle(color: PdfColors.red)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('-${payslip.deductions.toStringAsFixed(2)}', style: const pw.TextStyle(color: PdfColors.red), textAlign: pw.TextAlign.right),
+                        ),
+                      ],
+                    ),
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('EPF Employee Contribution (8%)', style: const pw.TextStyle(color: PdfColors.red)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('-${payslip.epfEmployee.toStringAsFixed(2)}', style: const pw.TextStyle(color: PdfColors.red), textAlign: pw.TextAlign.right),
+                        ),
+                      ],
+                    ),
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Income Tax', style: const pw.TextStyle(color: PdfColors.red)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('-${payslip.tax.toStringAsFixed(2)}', style: const pw.TextStyle(color: PdfColors.red), textAlign: pw.TextAlign.right),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+                
+                // Net Pay row
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Net Salary Disbursed:', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.green)),
+                    pw.Text('LKR ${payslip.net.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.green)),
+                  ],
+                ),
+                pw.SizedBox(height: 40),
+                
+                // Employer Compliance section
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(15),
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColors.grey100,
+                    borderRadius: pw.BorderRadius.all(pw.Radius.circular(8)),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Employer Compliance Contributions (Not deducted from salary):', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 8),
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Text('EPF Employer (12%):', style: const pw.TextStyle(fontSize: 10)),
+                          pw.Text('LKR ${payslip.epfEmployer.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 10)),
+                        ],
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Text('ETF Employer (3%):', style: const pw.TextStyle(fontSize: 10)),
+                          pw.Text('LKR ${payslip.etfEmployer.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 10)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                pw.Spacer(),
+                pw.Center(
+                  child: pw.Text('This is a computer-generated payslip advice and requires no signature.', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500)),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => doc.save(),
+      name: 'Payslip_${payslip.empId}_${payslip.month.replaceAll(' ', '_')}.pdf',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1046,6 +1236,21 @@ class PayslipDetailsModal extends StatelessWidget {
           _buildRow('EPF Employer (12%)', 'LKR ${payslip.epfEmployer.toStringAsFixed(2)}', Colors.white54),
           const SizedBox(height: 8),
           _buildRow('ETF Employer (3%)', 'LKR ${payslip.etfEmployer.toStringAsFixed(2)}', Colors.white54),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _downloadPayslipPdf(context),
+              icon: const Icon(Icons.download),
+              label: const Text('Download PDF Payslip'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
           const SizedBox(height: 20),
         ],
       ),
