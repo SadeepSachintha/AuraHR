@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config.dart';
 import '../models/employee.dart';
 import '../models/attendance.dart';
@@ -10,6 +11,9 @@ import '../models/task.dart';
 
 class ApiService {
   final String companyId;
+  final _secureStorage = const FlutterSecureStorage();
+  static const String _offlineQueueKey = 'aura_offline_attendance_queue';
+
   ApiService({this.companyId = Config.companyId});
 
   Map<String, String> get _headers => {
@@ -60,16 +64,72 @@ class ApiService {
         Uri.parse('${Config.apiUrl}/attendance'),
         headers: _headers,
         body: json.encode(attendance.toJson()),
-      );
+      ).timeout(const Duration(seconds: 5));
       
       final Map<String, dynamic> resData = json.decode(response.body);
       if (response.statusCode == 200) {
         return {'success': true};
       } else {
+        // If it's a server logic rejection (e.g. Geofence violation), don't queue offline.
         return {'success': false, 'error': resData['error'] ?? 'Server error'};
       }
     } catch (e) {
-      return {'success': false, 'error': e.toString()};
+      // Network timeout, DNS lookup error, socket exception etc.
+      // Queue offline for later sync
+      await _queueOfflineAttendance(attendance);
+      return {'success': true, 'offline': true};
+    }
+  }
+
+  Future<void> _queueOfflineAttendance(Attendance attendance) async {
+    try {
+      final dataStr = await _secureStorage.read(key: _offlineQueueKey);
+      List<dynamic> queue = [];
+      if (dataStr != null && dataStr.isNotEmpty) {
+        queue = json.decode(dataStr);
+      }
+      queue.add(attendance.toJson());
+      await _secureStorage.write(key: _offlineQueueKey, value: json.encode(queue));
+    } catch (e) {
+      print('Error queueing offline attendance: $e');
+    }
+  }
+
+  Future<int> syncOfflineQueue() async {
+    try {
+      final dataStr = await _secureStorage.read(key: _offlineQueueKey);
+      if (dataStr == null || dataStr.isEmpty) return 0;
+      
+      final List<dynamic> queue = json.decode(dataStr);
+      if (queue.isEmpty) return 0;
+
+      int syncedCount = 0;
+      List<dynamic> remaining = [];
+
+      for (var item in queue) {
+        final attendance = Attendance.fromJson(item);
+        try {
+          final response = await http.post(
+            Uri.parse('${Config.apiUrl}/attendance'),
+            headers: _headers,
+            body: json.encode(attendance.toJson()),
+          ).timeout(const Duration(seconds: 5));
+
+          if (response.statusCode == 200) {
+            syncedCount++;
+          } else {
+            remaining.add(item);
+          }
+        } catch (e) {
+          remaining.add(item);
+        }
+      }
+
+      await _secureStorage.write(key: _offlineQueueKey, value: json.encode(remaining));
+      return syncedCount;
+    } catch (e) {
+      print('Error syncing offline queue: $e');
+      return 0;
     }
   }
 

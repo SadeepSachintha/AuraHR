@@ -141,10 +141,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     setState(() => _isSubmitting = false);
 
     if (result['success'] == true) {
+      final isOffline = result['offline'] == true;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.isClockedIn ? 'Clocked out successfully!' : 'Clocked in successfully!'),
-          backgroundColor: Colors.green,
+          content: Text(isOffline
+              ? (widget.isClockedIn ? 'Clock-out saved offline! Will sync when online.' : 'Clock-in saved offline! Will sync when online.')
+              : (widget.isClockedIn ? 'Clocked out successfully!' : 'Clocked in successfully!')),
+          backgroundColor: isOffline ? Colors.amber[800] : Colors.green,
+          duration: Duration(seconds: isOffline ? 4 : 2),
         ),
       );
       Navigator.of(context).pop(true);

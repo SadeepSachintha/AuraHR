@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { 
   Users, 
   UserCheck, 
@@ -9,7 +9,7 @@ import {
   X,
   Compass
 } from 'lucide-react';
-import { Employee, Attendance, Leave, Task } from '../types';
+import type { Employee, Attendance, Leave, Task } from '../types';
 
 interface PulseDashboardProps {
   employees: Employee[];
@@ -29,6 +29,7 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
   onRejectLeave
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
+  const mapRef = useRef<any>(null);
   
   // 1. Stats Calculations
   const totalEmployees = employees.length;
@@ -37,7 +38,7 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
   // Pending leaves
   const pendingLeaves = leaves.filter(l => l.status === 'Pending');
   
-  // Overdue tasks: status is not completed and due_date is before today
+  // Overdue tasks
   const overdueTasks = tasks.filter(t => {
     if (t.status === 'completed') return false;
     return new Date(t.due_date) < new Date(todayStr);
@@ -49,16 +50,89 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
   }).length;
 
   // 2. Charts Calculations
-  // Attendance trend percentages for the last 5 days
   const trendData = [92, 85, 95, 75, 88];
   const trendLabels = ['June 26', 'June 27', 'June 28', 'June 29', 'June 30'];
 
-  // Headcount by department
   const depts = ['Engineering', 'Product', 'Human Resources', 'Marketing', 'Finance'];
   const deptCounts = depts.reduce((acc, dept) => {
     acc[dept] = employees.filter(e => e.dept === dept).length;
     return acc;
   }, {} as Record<string, number>);
+
+  // 3. Interactive Map Lifecycle
+  useEffect(() => {
+    const L = (window as any).L;
+    if (!L) return;
+
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+
+    const map = L.map('attendance-map', {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([6.9271, 79.8612], 12);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20
+    }).addTo(map);
+
+    mapRef.current = map;
+
+    // Plot Colombo HQ Center
+    const hqIcon = L.divIcon({
+      className: 'hq-marker-pulsing',
+      html: '<div style="width: 18px; height: 18px; background: #06b6d4; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px #06b6d4;"></div>',
+      iconSize: [18, 18]
+    });
+    L.marker([6.9271, 79.8612], { icon: hqIcon })
+      .addTo(map)
+      .bindPopup('<strong style="color: #0f172a;">AuraHR Colombo HQ</strong><br/><span style="color: #475569; font-size: 11px;">Geofence Center (200m radius)</span>');
+
+    // Plot checked-in employees
+    attendance
+      .filter(a => a.date === todayStr)
+      .forEach(att => {
+        const emp = employees.find(e => e.id === att.emp_id);
+        if (!emp) return;
+
+        const match = att.location.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
+        if (match) {
+          const lat = parseFloat(match[1]);
+          const lng = parseFloat(match[2]);
+
+          const dist = Math.hypot(lat - 6.9271, lng - 79.8612) * 111320;
+          const isGeofenced = dist <= 200;
+
+          const employeeIcon = L.divIcon({
+            className: 'employee-marker',
+            html: `<div style="width: 14px; height: 14px; background: ${isGeofenced ? '#10b981' : '#ef4444'}; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 8px ${isGeofenced ? '#10b981' : '#ef4444'};"></div>`,
+            iconSize: [14, 14]
+          });
+
+          L.marker([lat, lng], { icon: employeeIcon })
+            .addTo(map)
+            .bindPopup(`
+              <div style="color: #0f172a; font-family: sans-serif; font-size: 11px; padding: 2px; line-height: 1.4;">
+                <strong style="font-size: 12px; display: block; margin-bottom: 2px; color: #1e293b;">${emp.name}</strong>
+                <span style="color: #64748b; display: block;">${emp.role}</span>
+                <span style="color: #6366f1; font-weight: bold; display: block; margin-top: 4px;">Time: ${att.clock_in}</span>
+                <span style="color: ${isGeofenced ? '#10b981' : '#f59e0b'}; font-weight: bold; display: block; margin-top: 2px;">
+                  Status: ${isGeofenced ? 'Geofenced' : `Remote (${Math.round(dist)}m away)`}
+                </span>
+              </div>
+            `);
+        }
+      });
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [attendance, employees, todayStr]);
 
   return (
     <div className="space-y-6 font-sans">
@@ -129,11 +203,10 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
 
       {/* Interactive Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Attendance Trend Line Chart (Inline SVG) */}
+        {/* Attendance Trend Line Chart */}
         <div className="glass-inner-card rounded-2xl p-5 border border-white/5">
           <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider text-gray-300">Attendance Ratio Trends</h4>
           <div className="h-56 relative w-full flex items-end justify-between px-2 pt-6">
-            {/* Draw inline SVG Graph */}
             <svg className="absolute inset-0 h-full w-full p-2 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="chart-glow" x1="0" y1="0" x2="0" y2="1">
@@ -141,17 +214,14 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
                   <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
                 </linearGradient>
               </defs>
-              {/* Grid Lines */}
               <line x1="0" y1="20" x2="100" y2="20" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
               <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
               <line x1="0" y1="80" x2="100" y2="80" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
 
-              {/* Area path */}
               <path
                 d="M 5,90 L 5,45 Q 25,60 27,55 T 50,42 T 72,65 T 95,50 L 95,90 Z"
                 fill="url(#chart-glow)"
               />
-              {/* Line path */}
               <path
                 d="M 5,45 Q 25,60 27,55 T 50,42 T 72,65 T 95,50"
                 fill="none"
@@ -160,7 +230,6 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
                 strokeLinecap="round"
               />
 
-              {/* Data points */}
               <circle cx="5" cy="45" r="2.5" fill="#3b82f6" stroke="#fff" strokeWidth="0.5" />
               <circle cx="27" cy="55" r="2.5" fill="#3b82f6" stroke="#fff" strokeWidth="0.5" />
               <circle cx="50" cy="42" r="2.5" fill="#3b82f6" stroke="#fff" strokeWidth="0.5" />
@@ -168,7 +237,6 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
               <circle cx="95" cy="50" r="2.5" fill="#3b82f6" stroke="#fff" strokeWidth="0.5" />
             </svg>
             
-            {/* Label overlays */}
             {trendLabels.map((label, idx) => (
               <div key={idx} className="flex flex-col items-center z-10 w-1/5">
                 <span className="text-cyan-400 font-bold text-xs">{trendData[idx]}%</span>
@@ -206,14 +274,22 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
 
       {/* Dashboard Tables Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Live Attendance Map (5 cols) */}
+        <div className="glass-inner-card rounded-2xl p-5 border border-white/5 lg:col-span-5 flex flex-col h-[400px]">
+          <h4 className="text-sm font-semibold uppercase tracking-wider text-gray-300 mb-3">Live Map Tracker</h4>
+          <div className="flex-1 relative rounded-xl overflow-hidden border border-white/5">
+            <div id="attendance-map" className="absolute inset-0 h-full w-full z-10" />
+          </div>
+        </div>
+
         {/* Live Attendance Logs Feed (7 cols) */}
-        <div className="glass-inner-card rounded-2xl p-5 border border-white/5 lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="glass-inner-card rounded-2xl p-5 border border-white/5 lg:col-span-7 flex flex-col h-[400px]">
+          <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-semibold uppercase tracking-wider text-gray-300">Live Attendance Feed</h4>
             <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-ping"></span>
           </div>
 
-          <div className="overflow-x-auto w-full">
+          <div className="overflow-y-auto flex-1 pr-1">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-white/5 text-gray-500 text-xs font-semibold">
@@ -270,9 +346,11 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
             </table>
           </div>
         </div>
+      </div>
 
-        {/* Action Center - Leaves Approvals Widget (5 cols) */}
-        <div className="glass-inner-card rounded-2xl p-5 border border-white/5 lg:col-span-5 space-y-4">
+      <div className="grid grid-cols-1 gap-6">
+        {/* Action Center - Leaves Approvals Widget */}
+        <div className="glass-inner-card rounded-2xl p-5 border border-white/5 space-y-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-3">
             <h4 className="text-sm font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-2">
               <Compass size={16} className="text-orange-400" />
@@ -283,9 +361,9 @@ export const PulseDashboard: React.FC<PulseDashboardProps> = ({
             </span>
           </div>
 
-          <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 max-h-[350px] overflow-y-auto pr-1">
             {pendingLeaves.length === 0 ? (
-              <div className="text-center py-10 text-gray-500 text-sm">
+              <div className="col-span-full text-center py-10 text-gray-500 text-sm">
                 All leaves resolved! No pending items.
               </div>
             ) : (

@@ -29,6 +29,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
+    final synced = await _apiService.syncOfflineQueue();
+    if (synced > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully synchronized $synced offline check-in logs!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
     final emp = await _apiService.fetchEmployeeProfile(widget.empId);
     if (!mounted) return;
     if (emp != null) {
