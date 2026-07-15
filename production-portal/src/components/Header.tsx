@@ -7,7 +7,6 @@ import {
 
 interface HeaderProps {
   companyId: string;
-  setCompanyId: (id: string) => void;
   isSaaSActive: boolean;
   onResetData: () => void;
   searchQuery: string;
@@ -18,7 +17,6 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   companyId,
-  setCompanyId,
   isSaaSActive,
   onResetData,
   searchQuery,
@@ -44,18 +42,13 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Control Widgets */}
       <div className="flex items-center gap-4">
-        {/* Tenant/Company Selector Dropdown */}
-        <div className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-1.5 rounded-xl text-xs font-semibold">
-          <Building2 size={14} className="text-gray-400" />
-          <select
-            value={companyId}
-            onChange={(e) => setCompanyId(e.target.value)}
-            className="bg-transparent border-none text-white outline-none cursor-pointer font-sans"
-          >
-            <option value="company_aura" className="bg-[#121829] text-white">Aura Corporates</option>
-            <option value="company_techcorp" className="bg-[#121829] text-white">TechCorp Global</option>
-            <option value="company_retailhub" className="bg-[#121829] text-white">RetailHub LK</option>
-          </select>
+        {/* Tenant/Company Static Badge */}
+        <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-cyan-400">
+          <Building2 size={14} className="shrink-0" />
+          <span>
+            {companyId === 'company_techcorp' ? 'TechCorp Global' : 
+             companyId === 'company_retailhub' ? 'RetailHub LK' : 'Aura Corporates'}
+          </span>
         </div>
 
         {/* Sync Status Badge */}

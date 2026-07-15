@@ -63,18 +63,33 @@ const App: React.FC = () => {
     setTasks(taskList);
   };
 
+  const determineTenant = (email: string) => {
+    if (email.includes('@techcorp.')) {
+      setCompanyId('company_techcorp');
+    } else if (email.includes('@retailhub.')) {
+      setCompanyId('company_retailhub');
+    } else {
+      setCompanyId('company_aura');
+    }
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setUserEmail(session.user.email || 'admin@aurahr.io');
+        const email = session.user.email || 'admin@aurahr.io';
+        setUserEmail(email);
+        determineTenant(email);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUserEmail(session.user.email || 'admin@aurahr.io');
+        const email = session.user.email || 'admin@aurahr.io';
+        setUserEmail(email);
+        determineTenant(email);
       } else {
         setUserEmail(null);
+        setCompanyId('company_aura');
       }
     });
 
@@ -275,7 +290,6 @@ const App: React.FC = () => {
         {/* Master Header */}
         <Header
           companyId={companyId}
-          setCompanyId={setCompanyId}
           isSaaSActive={isSaaSActive}
           onResetData={handleResetData}
           searchQuery={searchQuery}
