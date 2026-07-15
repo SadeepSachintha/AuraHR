@@ -48,10 +48,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     for (var l in leaves) {
       if (l.status.toLowerCase() != 'pending') {
         final deciderStr = l.decider.isNotEmpty ? ' by ${l.decider}' : '';
+        DateTime? parsedDate;
+        try {
+          parsedDate = DateTime.parse(l.appliedOn);
+        } catch (_) {
+          parsedDate = DateTime.now();
+        }
+        
         list.add(RosterNotification(
           title: '${l.status} Leave Request',
           description: 'Your ${l.type} leave starting on ${l.start} has been ${l.status.toLowerCase()}$deciderStr.',
-          date: l.created_at,
+          date: parsedDate,
           status: l.status,
           isLeave: true,
         ));
@@ -65,7 +72,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         list.add(RosterNotification(
           title: '${c.status} Reimbursement Claim',
           description: 'Your ${c.category} claim for \$${c.amount.toStringAsFixed(2)} was ${c.status.toLowerCase()}$deciderStr.',
-          date: c.created_at,
+          date: DateTime.now(), // Fallback as Claim model contains no custom appliedOn date field
           status: c.status,
           isLeave: false,
         ));
@@ -114,7 +121,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     final isApproved = note.status.toLowerCase() == 'approved';
                     
                     return Container(
-                      margin: const EdgeInsets.bottom(12),
+                      margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.03),

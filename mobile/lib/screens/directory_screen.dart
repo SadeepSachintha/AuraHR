@@ -163,7 +163,7 @@ class _CoworkerDirectoryScreenState extends State<CoworkerDirectoryScreen> {
                             final emp = _filteredEmployees[index];
                             final isOnline = emp.status == 'online';
                             return Container(
-                              margin: const EdgeInsets.bottom(12),
+                              margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.03),
