@@ -3,11 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
 import '../models/attendance.dart';
+import '../models/roster.dart';
 
 class AttendanceScreen extends StatefulWidget {
   final String empId;
   final bool isClockedIn;
-  const AttendanceScreen({super.key, required this.empId, required this.isClockedIn});
+  final Roster? todayRoster;
+  const AttendanceScreen({super.key, required this.empId, required this.isClockedIn, this.todayRoster});
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
@@ -142,13 +144,33 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     if (result['success'] == true) {
       final isOffline = result['offline'] == true;
+      
+      String punctualityMsg = '';
+      bool isLate = false;
+      if (!widget.isClockedIn && widget.todayRoster != null) {
+        final now = DateTime.now();
+        final timeParts = widget.todayRoster!.shiftStart.split(':');
+        if (timeParts.length == 2) {
+          final startHour = int.tryParse(timeParts[0]) ?? 8;
+          final startMin = int.tryParse(timeParts[1]) ?? 30;
+          final shiftVal = startHour * 60 + startMin;
+          final currentVal = now.hour * 60 + now.minute;
+          if (currentVal > shiftVal) {
+            isLate = true;
+            punctualityMsg = ' (Late Check-in by ${currentVal - shiftVal} mins)';
+          } else {
+            punctualityMsg = ' (Punctual Check-in)';
+          }
+        }
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(isOffline
               ? (widget.isClockedIn ? 'Clock-out saved offline! Will sync when online.' : 'Clock-in saved offline! Will sync when online.')
-              : (widget.isClockedIn ? 'Clocked out successfully!' : 'Clocked in successfully!')),
-          backgroundColor: isOffline ? Colors.amber[800] : Colors.green,
-          duration: Duration(seconds: isOffline ? 4 : 2),
+              : (widget.isClockedIn ? 'Clocked out successfully!' : 'Clocked in successfully!$punctualityMsg')),
+          backgroundColor: isOffline ? Colors.amber[800] : (isLate ? Colors.orange[800] : Colors.green),
+          duration: Duration(seconds: isOffline ? 4 : 3),
         ),
       );
       Navigator.of(context).pop(true);

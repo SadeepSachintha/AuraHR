@@ -8,6 +8,7 @@ import '../models/leave.dart';
 import '../models/claim.dart';
 import '../models/payslip.dart';
 import '../models/task.dart';
+import '../models/roster.dart';
 
 class ApiService {
   final String companyId;
@@ -312,5 +313,24 @@ class ApiService {
       print('Error updating task: $e');
       return false;
     }
+  }
+
+  // Fetch roster assignment for an employee on a specific date
+  Future<Roster?> fetchTodayRoster(String empId, String date) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${Config.apiUrl}/rosters?emp_id=eq.$empId&date=eq.$date'),
+        headers: _headers,
+      );
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          return Roster.fromJson(data.first);
+        }
+      }
+    } catch (e) {
+      print('Error fetching roster: $e');
+    }
+    return null;
   }
 }

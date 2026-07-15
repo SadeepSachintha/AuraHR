@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/employee.dart';
 import '../models/attendance.dart';
+import '../models/roster.dart';
 import 'attendance_screen.dart';
 import 'self_service_screens.dart';
 import 'tasks_screen.dart';
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String _shiftStatus = 'Not Logged';
   bool _isClockedIn = false;
+  Roster? _todayRoster;
 
   @override
   void initState() {
@@ -41,14 +43,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final emp = await _apiService.fetchEmployeeProfile(widget.empId);
     if (!mounted) return;
     if (emp != null) {
-      // Mock loading today's shift log status
       final logs = await _apiService.fetchAttendanceLogs(widget.empId);
       if (!mounted) return;
       final todayStr = DateTime.now().toIso8601String().split('T')[0];
       final todayLog = logs.where((l) => l.date == todayStr).toList();
       
+      // Fetch today's shift roster from API
+      final roster = await _apiService.fetchTodayRoster(widget.empId, todayStr);
+      
       setState(() {
         _employee = emp;
+        _todayRoster = roster;
         _isLoading = false;
         if (todayLog.isNotEmpty) {
           if (todayLog.first.clockOut.isEmpty) {
@@ -185,9 +190,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Shift Schedule: 09:00 AM - 05:00 PM',
-                      style: TextStyle(color: Colors.white54, fontSize: 13),
+                    Text(
+                      _todayRoster != null 
+                          ? 'Shift Schedule: ${_todayRoster!.shiftStart} - ${_todayRoster!.shiftEnd}' 
+                          : 'Shift Schedule: 08:30 AM - 05:30 PM',
+                      style: const TextStyle(color: Colors.white54, fontSize: 13),
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
@@ -196,7 +203,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: _shiftStatus == 'Shift Ended' ? null : () async {
                           final result = await Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => AttendanceScreen(empId: emp.id, isClockedIn: _isClockedIn),
+                              builder: (context) => AttendanceScreen(
+                                empId: emp.id, 
+                                isClockedIn: _isClockedIn,
+                                todayRoster: _todayRoster,
+                              ),
                             ),
                           );
                           if (result == true) {
