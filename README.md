@@ -18,6 +18,11 @@ The suite also includes **Progressive Web App (PWA)** capabilities for offline c
   * A separate Vite + React + TS portal decoupled from the Web Simulator frame.
   * Secured by a **Supabase Auth Sign-In Gateway** (supporting sandbox fallback `admin@aurahr.io` / `admin123`).
   * Integrates a **Leaflet.js Live Attendance map** dynamically plotting Geofenced vs Remote employee check-in pins.
+  * **Role-Based Access Control (RBAC) Console**: Custom filters scoped by Super Admin, Department Manager (Engineering only, salary masking), and HR Specialist roles.
+  * **Audit Trail & Compliance Log**: Real-time SOC 2-ready administrative log events tracking log-ins, profile adjustments, leave decisions, and database reseeds.
+  * **Compliance Export Center**: Tabular CSV and print-ready PDF reporting modules for attendance timesheets, employee register directories, and leave logs.
+  * **Corporate Shift Planner & Roster Scheduler**: Weekly calendar layouts assigning rosters and calculating check-in punctuality compliance.
+  * **Dynamic Org Chart Visualizer**: Multi-level organizational hierarchy tree diagram mapping reporting relations.
 * **Progressive Web App (PWA)**:
   * Includes a [Web App Manifest](file:///d:/xampp/htdocs/HR App/manifest.json) supporting standard and maskable icons (`192x192` and `512x512` pixels), standalone viewport, and dark themes.
   * Uses a dedicated [Service Worker](file:///d:/xampp/htdocs/HR App/sw.js) implementing an **Offline Cache-First Strategy** for static assets.
@@ -149,6 +154,25 @@ CREATE TABLE public.kpis (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+CREATE TABLE public.audit_logs (
+    id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    operator TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    details TEXT NOT NULL,
+    ip_address TEXT DEFAULT '127.0.0.1',
+    company_id TEXT DEFAULT 'company_aura'
+);
+
+CREATE TABLE public.rosters (
+    id TEXT PRIMARY KEY,
+    emp_id TEXT REFERENCES public.employees(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    shift_start TEXT NOT NULL DEFAULT '08:30',
+    shift_end TEXT NOT NULL DEFAULT '17:30',
+    company_id TEXT DEFAULT 'company_aura'
+);
+
 -- 2. Create indices for fast multi-tenant lookup
 CREATE INDEX IF NOT EXISTS idx_emp_company ON public.employees(company_id);
 CREATE INDEX IF NOT EXISTS idx_att_company ON public.attendance(company_id);
@@ -156,6 +180,10 @@ CREATE INDEX IF NOT EXISTS idx_leaves_company ON public.leaves(company_id);
 CREATE INDEX IF NOT EXISTS idx_claims_company ON public.claims(company_id);
 CREATE INDEX IF NOT EXISTS idx_payslips_company ON public.payslips(company_id);
 CREATE INDEX IF NOT EXISTS idx_kpis_company ON public.kpis(company_id);
+CREATE INDEX IF NOT EXISTS idx_audit_company ON public.audit_logs(company_id);
+CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON public.audit_logs(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_rosters_company ON public.rosters(company_id);
+CREATE INDEX IF NOT EXISTS idx_rosters_date ON public.rosters(date);
 ```
 
 ---
